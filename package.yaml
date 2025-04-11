@@ -36,7 +36,6 @@ ghc-options:
 library:
   source-dirs: src
   dependencies:
-    - containers
     - mtl
 
 executables:
@@ -49,7 +48,6 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - bprog
-    - containers
 
 tests:
   bprog-test:

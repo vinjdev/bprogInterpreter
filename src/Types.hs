@@ -4,11 +4,9 @@ module Types (
     Dictionary
 ) where
 
-import qualified Data.Map as Map
 --import Control.Monad.State
 --import Control.Monad.Except
---import Errors 
-
+import MyMap 
 
 -- Data types for BPROG
 data Types
@@ -25,20 +23,6 @@ data Types
 type Stack = [Types]
 
 -- Data Structure for variable and function assignment
-type Dictionary = Map.Map String Types
+type Dictionary = MyMap String Types
 
-{-
-data BprogState = BprogState 
-    {
-          stack :: Stack
-        , tags :: SymbolTable
-    }
-    deriving(Show)
-
--- Interpreter monad
--- Can fail with BprogError
--- Can modify and access BprogState (Stack and Dictionary)
--- Produces value a if succeded
-type Interpreter a = ExceptT BprogError (State BprogState) a
--}
 

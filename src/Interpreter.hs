@@ -8,39 +8,70 @@ module Interpreter (
 
 import Types
 import Errors
-import qualified Data.Map as Map
+import MyMap
+import BprogMonad
 
 type EvalState = (Stack, Dictionary)
 
-push :: Types -> EvalState -> EvalState
-push val (stk,env) = (val : stk,env)
-
-eval :: Types -> EvalState -> Either BprogError EvalState
-eval val (stk,env) = case val of 
-    Numbo n -> Right $ push (Numbo n) (stk,env)
-    Deci f -> Right $ push (Deci f) (stk,env)
-    Truthy b -> Right $ push (Truthy b) (stk,env)
-    Wordsy w -> Right $ push (Wordsy w) (stk,env)
-    Bag xs -> Right $ push (Bag xs) (stk,env)
-    Block xs -> Right $ push (Block xs) (stk,env)
-
-    Tag ":=" -> 
-        case stk of
-            val : Tag name : rest -> Right (rest, Map.insert name val env)
-            _                     -> Left (RunTime ExpectedVariable)
-
-    Tag sym ->
-        case Map.lookup sym env of
-            Just val2 -> eval val2 (stk,env)
-            Nothing   -> Right (Tag sym : stk,env)
-
-    
-    
-    
-evalProgram :: [Types] -> EvalState -> Either BprogError EvalState
+-- Evalualte the parsed program 
+evalProgram :: [Types] -> Bprog ()
 evalProgram [] state = Right state
-evalProgram (x:xs) state = do
-    newState <- eval x state
-    evalProgram xs newState
+evalProgram (x:xs) = do
+    eval x
+    evalProgram xs
+
+
+eval :: Types -> Bprog ()
+eval val = case val of 
+    
+    -- Standard literals
+    Numbo n -> modifyStack (Numbo n :)
+    Deci f -> modifyStack (Deci f :)
+    Truthy b -> modifyStack (Truthy b :)
+    Wordsy w -> modifyStack (Wordsy w :) 
+    Bag xs -> modifyStack (Bag xs :) 
+    Block xs -> modifyStack (Block xs:)
+        
+    -- Stack Operations
+    Tag "dup" -> do
+        stk <- getStack
+        case stk of
+            (x:xs) -> putStack (x:x:xs)
+            []     -> throwB $ RunTime StackEmpty
+    
+    Tag "swap" -> do
+        stk <- getStack
+        case stk of
+            (x:y:xs) -> putStack (y:x:xs)
+            _        -> throwB $ RunTime StackEmpty
+
+    Tag "pop" -> do
+        stk <- getStack
+        case stk of
+            (_:xs) -> putStack (xs)
+            []     -> throwB $ RunTime StackEmpty
+    
+    -- Assignments
+    Tag ":=" -> do
+        stk <- getStack
+        case stk of
+            val : Tag name : rest -> do
+                dict <- getDict
+                putDict (myInsert name val dict)
+                putStack rest
+            _ -> throwB $ RunTime ExpectedVariable
+            
+
+    -- Tag lookup
+    Tag sym -> do
+        dict <- getDict
+        case myLookup sym dict of
+            Just val2 -> eval val2
+            Nothing -> modifyStack (Tag sym :)
+        
+
+    
+    
+
 
 
