@@ -1,12 +1,12 @@
 module Types (
     Types(..),
     Stack,
-    Dictionary
+    Dictionary,
+    EvalState
 ) where
 
---import Control.Monad.State
---import Control.Monad.Except
-import MyMap 
+
+import qualified Data.Map as Map
 
 -- Data types for BPROG
 data Types
@@ -25,4 +25,5 @@ type Stack = [Types]
 -- Data Structure for variable and function assignment
 type Dictionary = MyMap String Types
 
-
+-- The current condition of the stack and dictionary
+type EvalState = (Stack,Dictionary)
