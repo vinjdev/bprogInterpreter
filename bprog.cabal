@@ -26,12 +26,9 @@ source-repository head
 library
   exposed-modules:
       Arithmetics
-      BprogIO
-      BprogMonad
       Errors
       Interpreter
       ListOp
-      MyMap
       Parser
       Repl
       Types
