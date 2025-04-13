@@ -17,6 +17,8 @@ listOps :: [String]
 listOps = ["head", "tail", "empty", "length", "cons", "append", "each", "map", "foldl"]
 
 
+
+
 -- Evaluates parsed input with program logic
 --
 -- Returns IO, Error or State (Stack,Dictionary)
