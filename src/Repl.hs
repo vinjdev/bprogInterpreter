@@ -30,9 +30,8 @@ replLoop state = do
         _ -> processInput input state >>= replLoop 
 
 processInput :: String -> EvalState -> IO EvalState
-processInput input state = do
-    let toks = tokenizer input
-    case parseTokens toks of
+processInput input state =
+    case parseTokens $ tokenizer input of
         Left err -> (putStrLn $ prettyErr err) >> pure state
         Right program -> do
             result <- evalProgram program state

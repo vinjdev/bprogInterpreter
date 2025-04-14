@@ -39,7 +39,17 @@ eval val (stk,env) = case val of
     Truthy b -> pure $ Right $ push (Truthy b) (stk,env)
     Wordsy w -> pure $ Right $ push (Wordsy w) (stk,env)
     Bag xs -> pure $ Right $ push (Bag xs) (stk,env)
-    Block xs -> pure $ Right $ push (Block xs) (stk,env)
+    --Block xs -> pure $ Right $ push (Block xs) (stk,env)
+
+    Block xs -> 
+        case stk of
+            --Tag "each" : Bag list : rest -> 
+            --Tag "map" : Bag list : rest -> 
+            --Tag "foldl" : Bag list : rest -> 
+            --Block thenBlock : Tag "if" : rest ->
+            --Block break : Tag "loop" : rest ->
+            --Tag "times" : rest ->
+            _ -> pure $ Right $ push (Block xs) (stk,env)
 
     -- IO Operations
     Tag "print" ->
@@ -50,7 +60,7 @@ eval val (stk,env) = case val of
             [] -> pure $ Left (RunTime StackEmpty)
 
     Tag "read" -> do
-        putStr "Input "
+        putStr "Input: "
         hFlush stdout
         input <- getLine
         pure $ Right (Wordsy input : stk,env)

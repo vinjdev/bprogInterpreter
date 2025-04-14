@@ -57,7 +57,7 @@ parseTokens (tok:toks)
 -- Right (["\"","this","is","a","string","\""],["1","2"])
 --
 parseBracket :: String -> String -> [String] -> Either BprogError ([String],[String])
-parseBracket open close = go 1 []
+parseBracket open close = go 1 [] -- 1 as first bracket is omited
     where
         go _ _ [] = Left (Parse IncompleteQuotation)
         go depth acc (tok:toks)
