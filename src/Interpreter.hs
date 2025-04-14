@@ -9,18 +9,16 @@ import Types
 import Errors
 import qualified Data.Map as Map
 import Arithmetics
+import System.IO (hFlush, stdout)
 import ListOp
 
 push :: Types -> EvalState -> EvalState
 push val (stk,env) = (val : stk,env)
 
-listOps :: [String]
-listOps = ["head", "tail", "empty", "length", "cons", "append", "each", "map", "foldl"]
-
-
-
 
 -- Evaluates parsed input with program logic
+--
+-- Eager evaluation, so it will try to evaluate as it runs through 
 --
 -- Returns IO, Error or State (Stack,Dictionary)
 evalProgram :: [Types] -> EvalState -> IO (Either BprogError EvalState)
@@ -52,15 +50,14 @@ eval val (stk,env) = case val of
             [] -> pure $ Left (RunTime StackEmpty)
 
     Tag "read" -> do
+        putStr "Input "
+        hFlush stdout
         input <- getLine
         pure $ Right (Wordsy input : stk,env)
             
     Tag op
+        | elem op arithmeticsOps -> pure $ evalArithmetics op (stk,env)
         | elem op listOps -> pure $ evalListOp op (stk,env)
-
-    -- Arithmics
-    Tag op 
-        | elem op ["+", "-", "*","/"] -> pure $ evalArithmetics op (stk,env)
 
     -- Stack operations
     Tag "dup" ->
@@ -89,10 +86,16 @@ eval val (stk,env) = case val of
             value : Tag name : rest -> pure $ Right (rest, Map.insert name value env)
             _                     -> pure $ Left (RunTime ExpectedVariable)
 
+    -- Executes a code block, which is at the top of the stack
+    Tag "exec" ->
+        case stk of
+            Block code : rest -> evalProgram code (rest,env)
+            _ -> pure $ Left (RunTime ExpectedVariable)
+
     -- Function call
     Tag sym ->
         case Map.lookup sym env of
             Just (Block body) -> evalProgram body (stk,env) -- Evaluate function body
-            Just value -> pure $ Right (value : stk, env) 
+            Just value -> pure $ Right (value : stk, env)   -- Evaluate a value
             Nothing  -> pure $ Right (Tag sym : stk,env)
 

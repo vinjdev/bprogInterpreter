@@ -1,9 +1,13 @@
 module Arithmetics(
+    arithmeticsOps,
     evalArithmetics
 ) where
 
 import Types
 import Errors
+
+arithmeticsOps :: [String]
+arithmeticsOps = ["+", "-", "*","/"]
 
 evalArithmetics :: String -> EvalState -> Either BprogError EvalState
 evalArithmetics op (stk,env) = case (op,stk) of

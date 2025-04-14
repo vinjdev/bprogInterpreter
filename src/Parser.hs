@@ -74,14 +74,14 @@ parseBracket open close = go 1 []
 parseString :: [String] -> Either BprogError (String, [String])
 parseString = go []
     where 
-        go str [] = Left (Parse IncompleteString)      -- Error
+        go _ [] = Left (Parse IncompleteString)        -- Error
         go str ("\"":rest) = Right (unwords str, rest) -- End of string, return
         go str (tok:toks) = go (str ++ [tok]) toks     -- append to string 
 
 -- Parse
 parseLiteral :: String -> Types
 parseLiteral s =
-    case parseInteger s of
+    case parseInteger s of 
         Just val -> val
         Nothing -> case parseFloat s of
                       Just val -> val
