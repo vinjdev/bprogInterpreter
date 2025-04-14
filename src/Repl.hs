@@ -6,13 +6,14 @@ import Types
 import Errors
 import Parser
 import Interpreter
-import MyMap
 import System.IO (hFlush, stdout)
+import qualified Data.Map as Map
+
 
 startRepl :: IO ()
 startRepl = do
     putStrLn "Welcome to the BPROG REPL"
-    replLoop ([],myEmpty) -- initilze the dictionary to be empty
+    replLoop ([],Map.empty) -- initilze the dictionary to be empty
 
 replLoop :: EvalState -> IO ()
 replLoop state = do

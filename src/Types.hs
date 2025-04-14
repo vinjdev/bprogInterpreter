@@ -23,7 +23,7 @@ data Types
 type Stack = [Types]
 
 -- Data Structure for variable and function assignment
-type Dictionary = MyMap String Types
+type Dictionary = Map.Map String Types
 
 -- The current condition of the stack and dictionary
 type EvalState = (Stack,Dictionary)

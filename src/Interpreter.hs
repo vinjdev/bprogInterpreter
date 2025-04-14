@@ -5,7 +5,8 @@ module Interpreter (
 
 -- | Interpreter
 -- Runtime evaluations
-
+import Types
+import Errors
 import qualified Data.Map as Map
 import Arithmetics
 import ListOp
