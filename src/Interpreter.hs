@@ -13,6 +13,20 @@ import ListOp
 import StackOp
 import BprogIO
 
+evalListEachOp :: [Types] -> [Types] -> EvalState -> IO (Either BprogError EvalState)
+evalListEachOp list code (stk,dict) =
+    foldl
+        (\accIO el -> do
+            acc <- accIO -- Get value from io state
+            case acc of
+                Left err -> pure $ Left err
+                Right (s,d) -> evalProgram code (el : s,d)
+        )
+        (pure $ Right (stk,dict)) -- value to be accumelated
+        list                      -- list to fold through
+
+evalListMapOp :: [Types] -> [Types] -> EvalState -> IO (Either BprogError EvalState)
+evalListMapOp list code (stk,dict) = undefined
 
 -- Evaluates parsed input with program logic
 --
@@ -27,9 +41,8 @@ evalProgram (x:xs) state = do
     result <- eval x state
     case result of
         Left err -> pure $ Left err
-        Right newState -> evalProgram xs newState
+        Right newState -> evalProgram xs newState -- Evaluate the input, and add them to the stack or dictionary
 
--- Evaluate the input, and add them to the stack or dictionary
 eval :: Types -> EvalState -> IO (Either BprogError EvalState)
 eval val (stk,env) = case val of 
 
@@ -43,11 +56,12 @@ eval val (stk,env) = case val of
 
     Block xs -> 
         case stk of
-            --Tag "each" : Bag list : rest -> 
-            --Tag "map" : Bag list : rest -> 
+            Tag "each" : Bag list : _ -> evalListEachOp list xs (stk,env)
+                
+            --Tag "map" : Bag list : rest -> evalListMapOp list xs (stk,env)
             --Tag "foldl" : Bag list : rest -> 
             --Block thenBlock : Tag "if" : rest ->
-            --Block break : Tag "loop" : rest ->
+            --Block break : Tag "loop" : rest -
             --Tag "times" : rest ->
             _ -> push (Block xs) (stk,env)
     
@@ -81,7 +95,7 @@ eval val (stk,env) = case val of
             Block code : rest -> evalProgram code (rest,env)
             _ -> pure $ Left (RunTime ExpectedVariable)
 
-    -- Function call
+    -- Function call, or empty tag
     Tag sym ->
         case Map.lookup sym env of
             Just (Block body) -> evalProgram body (stk,env) -- Evaluate function body

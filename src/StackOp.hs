@@ -9,7 +9,6 @@ import Types
 import Errors
 
 push :: Types -> EvalState -> IO (Either BprogError EvalState)
-push _ (_,_) = pure $ Left (RunTime UnknownSymbol) 
 push val (stk,dict) = pure $ Right (val : stk,dict)
 
 pop :: EvalState -> IO (Either BprogError EvalState)
