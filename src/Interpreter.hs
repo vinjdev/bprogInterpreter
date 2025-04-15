@@ -9,11 +9,9 @@ import Types
 import Errors
 import qualified Data.Map as Map
 import Arithmetics
-import System.IO (hFlush, stdout)
 import ListOp
-
-push :: Types -> EvalState -> EvalState
-push val (stk,env) = (val : stk,env)
+import StackOp
+import BprogIO
 
 
 -- Evaluates parsed input with program logic
@@ -21,6 +19,8 @@ push val (stk,env) = (val : stk,env)
 -- Eager evaluation, so it will try to evaluate as it runs through 
 --
 -- Returns IO, Error or State (Stack,Dictionary)
+--
+-- TODO: LOAD FUNCTIONS FROM A MAP - USING LOOKUP
 evalProgram :: [Types] -> EvalState -> IO (Either BprogError EvalState)
 evalProgram [] state = pure $ Right state
 evalProgram (x:xs) state = do
@@ -34,12 +34,12 @@ eval :: Types -> EvalState -> IO (Either BprogError EvalState)
 eval val (stk,env) = case val of 
 
     -- Pushing data types onto the stack
-    Numbo n -> pure $ Right $ push (Numbo n) (stk,env)
-    Deci f -> pure $ Right $ push (Deci f) (stk,env)
-    Truthy b -> pure $ Right $ push (Truthy b) (stk,env)
-    Wordsy w -> pure $ Right $ push (Wordsy w) (stk,env)
-    Bag xs -> pure $ Right $ push (Bag xs) (stk,env)
-    --Block xs -> pure $ Right $ push (Block xs) (stk,env)
+    Numbo n -> push (Numbo n) (stk,env) 
+    Deci f -> push (Deci f) (stk,env) 
+    Truthy b -> push (Truthy b) (stk,env) 
+    Wordsy s -> push (Wordsy s) (stk,env) 
+    Bag xs -> push (Bag xs) (stk,env) 
+    --Block xs -> push (Block xs) (stk,env)
 
     Block xs -> 
         case stk of
@@ -49,41 +49,20 @@ eval val (stk,env) = case val of
             --Block thenBlock : Tag "if" : rest ->
             --Block break : Tag "loop" : rest ->
             --Tag "times" : rest ->
-            _ -> pure $ Right $ push (Block xs) (stk,env)
-
-    -- IO Operations
-    Tag "print" ->
-        case stk of
-            x:xs -> do
-                print x
-                pure $ Right (xs,env)
-            [] -> pure $ Left (RunTime StackEmpty)
-
-    Tag "read" -> do
-        putStr "Input: "
-        hFlush stdout
-        input <- getLine
-        pure $ Right (Wordsy input : stk,env)
-            
+            _ -> push (Block xs) (stk,env)
+    
     Tag op
-        | elem op arithmeticsOps -> pure $ evalArithmetics op (stk,env)
-        | elem op listOps -> pure $ evalListOp op (stk,env)
+        | elem op arithmeticsOps -> evalArithmetics op (stk,env)
+        | elem op listOps -> evalListOp op (stk,env)
 
     -- Stack operations
-    Tag "dup" ->
-        case stk of
-            (x:xs) -> pure $ Right (x:x:xs,env)
-            []    -> pure $ Left (RunTime StackEmpty)
+    Tag "dup" -> dup (stk,env)
+    Tag "swap" -> swap (stk,env)
+    Tag "pop" -> pop (stk,env)
 
-    Tag "swap" ->
-        case stk of
-            (x:y:xs) -> pure $ Right (y:x:xs,env)
-            _       -> pure $ Left (RunTime StackEmpty)
-
-    Tag "pop" ->
-        case stk of
-            (_:xs) -> pure $ Right (xs, env)
-            []    -> pure $ Left (RunTime StackEmpty) 
+    -- IO Operations
+    Tag "print" -> printOp (stk,env)
+    Tag "read" -> readOp (stk,env)
 
     -- Function and variable assignment
     Tag ":=" -> 

@@ -27,7 +27,7 @@ replLoop state = do
         ":stack" -> printStack state >> replLoop state
         ":m" -> printDictionary state >> replLoop state
         ":map" -> printDictionary state >> replLoop state
-        _ -> processInput input state >>= replLoop 
+        _ -> processInput input state >>= replLoop -- Make a new State
 
 processInput :: String -> EvalState -> IO EvalState
 processInput input state =
