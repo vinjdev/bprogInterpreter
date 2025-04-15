@@ -13,21 +13,6 @@ import ListOp
 import StackOp
 import BprogIO
 
-evalListEachOp :: [Types] -> [Types] -> EvalState -> IO (Either BprogError EvalState)
-evalListEachOp list code (stk,dict) =
-    foldl
-        (\accIO el -> do
-            acc <- accIO -- Get value from io state
-            case acc of
-                Left err -> pure $ Left err
-                Right (s,d) -> evalProgram code (el : s,d)
-        )
-        (pure $ Right (stk,dict)) -- value to be accumelated
-        list                      -- list to fold through
-
-evalListMapOp :: [Types] -> [Types] -> EvalState -> IO (Either BprogError EvalState)
-evalListMapOp list code (stk,dict) = undefined
-
 -- Evaluates parsed input with program logic
 --
 -- Eager evaluation, so it will try to evaluate as it runs through 
@@ -44,7 +29,7 @@ evalProgram (x:xs) state = do
         Right newState -> evalProgram xs newState -- Evaluate the input, and add them to the stack or dictionary
 
 eval :: Types -> EvalState -> IO (Either BprogError EvalState)
-eval val (stk,env) = case val of 
+eval val (stk,env) = case val of
 
     -- Pushing data types onto the stack
     Numbo n -> push (Numbo n) (stk,env) 
@@ -54,16 +39,40 @@ eval val (stk,env) = case val of
     Bag xs -> push (Bag xs) (stk,env) 
     --Block xs -> push (Block xs) (stk,env)
 
-    Block xs -> 
+    -- Code operations
+    --
+    -- TODO: FIX BUG WITH STACK STILL HAVING VALUES
+    Block code -> 
         case stk of
-            Tag "each" : Bag list : _ -> evalListEachOp list xs (stk,env)
+            Tag "each" : Bag list : rest -> 
+                foldl
+                    (\accIO el -> do -- accumulator and el (element) in the list
+                        acc <- accIO -- Get value from io state
+                        case acc of
+                            Left err -> pure $ Left err
+                            Right (s,d) -> evalProgram code (el : s,d)
+                    )
+                    (pure $ Right (rest,env)) -- value to be accumelated
+                    list                      -- list to fold through
                 
-            --Tag "map" : Bag list : rest -> evalListMapOp list xs (stk,env)
-            --Tag "foldl" : Bag list : rest -> 
+            Tag "map" : Bag list : rest -> do
+                let evalOne el = evalProgram code (el : stk,env) -- el: element in the list
+
+                result <- mapM evalOne list -- result: [Right ([2],env)]
+                case sequence result of     -- result: Right [([2],env)]
+                    Left err -> pure $ Left err
+                    Right states -> case traverse extractTop states of  
+                                        Nothing -> pure $ Left (RunTime ExpectedQuotation)
+                                        Just newValues -> pure $ Right (Bag newValues : rest,env)
+                where
+                    extractTop (x:_,_) = Just x
+                    extractTop _ = Nothing
+            
+            --Tag "foldl" : Bag list : rest ->
             --Block thenBlock : Tag "if" : rest ->
             --Block break : Tag "loop" : rest -
             --Tag "times" : rest ->
-            _ -> push (Block xs) (stk,env)
+            _ -> push (Block code) (stk,env)
     
     Tag op
         | elem op arithmeticsOps -> evalArithmetics op (stk,env)
@@ -101,4 +110,3 @@ eval val (stk,env) = case val of
             Just (Block body) -> evalProgram body (stk,env) -- Evaluate function body
             Just value -> pure $ Right (value : stk, env)   -- Evaluate a value
             Nothing  -> pure $ Right (Tag sym : stk,env)
-

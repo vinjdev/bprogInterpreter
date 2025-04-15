@@ -37,13 +37,21 @@ processInput input state =
             result <- evalProgram program state
             case result of
                 Left err -> (putStrLn $ prettyErr err) >> pure state
-                Right newState -> pure newState
+                Right newState -> do
+                    printLastVal newState
+                    pure newState
 
 
 -- Helper functions to print out stack and dictionary
 
 printStack :: EvalState -> IO ()
 printStack (stk,_) = putStrLn $ "Stack: " ++ show stk
+
+printLastVal :: EvalState -> IO () 
+printLastVal (stk,_) = 
+    case stk of
+        [] -> putStrLn "Stack is empty..."
+        _ -> putStrLn $ show (last stk)
 
 printDictionary :: EvalState -> IO ()
 printDictionary (_,eval) = putStrLn $ "Map: " ++ show eval
