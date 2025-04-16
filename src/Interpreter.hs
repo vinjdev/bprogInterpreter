@@ -70,16 +70,14 @@ eval val state@(stk,env) = case val of
             Block code : rest -> evalProgram code (rest,env)
             _ -> pure $ Left (RunTime ExpectedVariable)
 
-    -- Function call, or empty tag
+    -- Function call, or push 
     Tag sym ->
         case Map.lookup sym env of
             Just (Block body) -> evalProgram body state     -- Evaluate function body
-            Just value -> pure $ Right (value : stk, env)   -- Evaluate a value
+            Just value -> push value state                  -- push value assignment 
             Nothing  -> push (Tag sym) state                -- push
 
-    -- Code operations
-    --
-    -- TODO: FIX BUG WITH STACK STILL HAVING VALUES
+    -- Code Block operations
     Block code -> 
         case stk of
             Tag "each" : Bag list : rest -> do
