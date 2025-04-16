@@ -12,6 +12,7 @@ import Arithmetics
 import ListOp
 import StackOp
 import BprogIO
+import Control.Monad (foldM)
 
 -- Evaluates parsed input with program logic
 --
@@ -29,63 +30,28 @@ evalProgram (x:xs) state = do
         Right newState -> evalProgram xs newState -- Evaluate the input, and add them to the stack or dictionary
 
 eval :: Types -> EvalState -> IO (Either BprogError EvalState)
-eval val (stk,env) = case val of
+eval val state@(stk,env) = case val of
 
     -- Pushing data types onto the stack
-    Numbo n -> push (Numbo n) (stk,env) 
-    Deci f -> push (Deci f) (stk,env) 
-    Truthy b -> push (Truthy b) (stk,env) 
-    Wordsy s -> push (Wordsy s) (stk,env) 
-    Bag xs -> push (Bag xs) (stk,env) 
-    --Block xs -> push (Block xs) (stk,env)
-
-    -- Code operations
-    --
-    -- TODO: FIX BUG WITH STACK STILL HAVING VALUES
-    Block code -> 
-        case stk of
-            Tag "each" : Bag list : rest -> 
-                foldl
-                    (\accIO el -> do -- accumulator and el (element) in the list
-                        acc <- accIO -- Get value from io state
-                        case acc of
-                            Left err -> pure $ Left err
-                            Right (s,d) -> evalProgram code (el : s,d)
-                    )
-                    (pure $ Right (rest,env)) -- value to be accumelated
-                    list                      -- list to fold through
-                
-            Tag "map" : Bag list : rest -> do
-                let evalOne el = evalProgram code (el : stk,env) -- el: element in the list
-
-                result <- mapM evalOne list -- result: [Right ([2],env)]
-                case sequence result of     -- result: Right [([2],env)]
-                    Left err -> pure $ Left err
-                    Right states -> case traverse extractTop states of  
-                                        Nothing -> pure $ Left (RunTime ExpectedQuotation)
-                                        Just newValues -> pure $ Right (Bag newValues : rest,env)
-                where
-                    extractTop (x:_,_) = Just x
-                    extractTop _ = Nothing
-            
-            --Tag "foldl" : Bag list : rest ->
-            --Block thenBlock : Tag "if" : rest ->
-            --Block break : Tag "loop" : rest -
-            --Tag "times" : rest ->
-            _ -> push (Block code) (stk,env)
+    Numbo n -> push (Numbo n) state
+    Deci f -> push (Deci f) state
+    Truthy b -> push (Truthy b) state 
+    Wordsy s -> push (Wordsy s) state 
+    Bag xs -> push (Bag xs) state
     
+    -- arithmetics and list operations
     Tag op
-        | elem op arithmeticsOps -> evalArithmetics op (stk,env)
-        | elem op listOps -> evalListOp op (stk,env)
+        | elem op arithmeticsOps -> evalArithmetics op state
+        | elem op listOps -> evalListOp op state
 
     -- Stack operations
-    Tag "dup" -> dup (stk,env)
-    Tag "swap" -> swap (stk,env)
-    Tag "pop" -> pop (stk,env)
+    Tag "dup" -> dup state
+    Tag "swap" -> swap state 
+    Tag "pop" -> pop state 
 
     -- IO Operations
-    Tag "print" -> printOp (stk,env)
-    Tag "read" -> readOp (stk,env)
+    Tag "print" -> printOp state 
+    Tag "read" -> readOp state 
 
     -- Function and variable assignment
     Tag ":=" -> 
@@ -107,6 +73,58 @@ eval val (stk,env) = case val of
     -- Function call, or empty tag
     Tag sym ->
         case Map.lookup sym env of
-            Just (Block body) -> evalProgram body (stk,env) -- Evaluate function body
+            Just (Block body) -> evalProgram body state     -- Evaluate function body
             Just value -> pure $ Right (value : stk, env)   -- Evaluate a value
-            Nothing  -> pure $ Right (Tag sym : stk,env)
+            Nothing  -> push (Tag sym) state                -- push
+
+    -- Code operations
+    --
+    -- TODO: FIX BUG WITH STACK STILL HAVING VALUES
+    Block code -> 
+        case stk of
+            Tag "each" : Bag list : rest -> do
+                let runEach acc el = do
+                        case acc of
+                            Left err -> pure $ Left err
+                            Right (s,d) -> evalProgram code (el : s,d)
+
+                result <- foldM runEach (Right (rest,env)) list 
+                pure result   
+            Tag "each" : _ : _ -> pure $ Left (RunTime ExpectedList)
+                
+            Tag "map" : Bag list : rest -> do
+                let evalOne el = evalProgram code (el : rest,env) -- el: element in the list
+
+                result <- mapM evalOne list -- result: [Right ([2],env)]
+                case sequence result of     -- result: Right [([2],env)]
+                    Left err -> pure $ Left err
+                    Right states -> case traverse extractTop states of  
+                                        Nothing -> pure $ Left (RunTime ExpectedQuotation)
+                                        Just newValues -> pure $ Right (Bag newValues : rest,env)
+                where
+                    extractTop (x:_,_) = Just x
+                    extractTop _ = Nothing
+            Tag "map" : _ : _ -> pure $ Left (RunTime ExpectedList)
+            
+            --Tag "foldl" : Numbo n : Bag list : rest ->
+                
+            Block thenBlock : Tag "if" : Truthy b : rest ->
+                if Truthy b == Truthy True then evalProgram thenBlock (rest,env)
+                                           else evalProgram code (rest,env)
+
+            Block _ : Tag "if" : _ : _ -> pure $ Left (RunTime ExpectedBool)
+            --Block break : Tag "loop" : rest ->
+
+            Tag "times" : Numbo n : rest -> do
+                let runNTimes 0 state' = pure $ Right state'
+                    runNTimes i state' = do
+                        result <- evalProgram code state'
+                        case result of
+                            Left err -> pure $ Left err
+                            Right newState -> runNTimes (i-1) newState
+                runNTimes n (rest,env) 
+            Tag "times" : _ : _ -> pure $ Left (RunTime ExpectedBoolOrNumber)
+                
+
+            -- pushing code block to stack, if no operations
+            _ -> push (Block code) state

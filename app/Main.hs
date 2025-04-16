@@ -1,9 +1,17 @@
 module Main (main) where
 
-import Repl (startRepl)
+import ReplMode
+import NormalMode
+import System.Environment (getArgs)
+
 
 main :: IO ()
-main = startRepl
+main = do
+    args <- getArgs
+    case args of
+        [] -> startRepl
+        [file] -> runNormal file
+        _ -> putStrLn "Wrong usage"
 
 
 

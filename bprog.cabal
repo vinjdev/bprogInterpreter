@@ -30,8 +30,9 @@ library
       Errors
       Interpreter
       ListOp
+      NormalMode
       Parser
-      Repl
+      ReplMode
       StackOp
       Types
   other-modules:

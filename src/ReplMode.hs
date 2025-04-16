@@ -1,4 +1,4 @@
-module Repl (
+module ReplMode (
     startRepl
 ) where
 
@@ -13,7 +13,7 @@ import qualified Data.Map as Map
 startRepl :: IO ()
 startRepl = do
     putStrLn "Welcome to the BPROG REPL"
-    replLoop ([],Map.empty) -- initilze the dictionary to be empty
+    replLoop ([],Map.empty) -- initilze the stack and dictionary to be empty
 
 replLoop :: EvalState -> IO ()
 replLoop state = do
@@ -21,25 +21,28 @@ replLoop state = do
     hFlush stdout
     input <- getLine
     case input of
+        -- Exit loop
         ":q" -> putStrLn "Goodbye!"
         ":quit" -> putStrLn "Goodbye!"
+        -- Keep old state
         ":s" -> printStack state >> replLoop state
         ":stack" -> printStack state >> replLoop state
         ":m" -> printDictionary state >> replLoop state
         ":map" -> printDictionary state >> replLoop state
-        _ -> processInput input state >>= replLoop -- Make a new State
+        -- Make a new State
+        _ -> processInput input state >>= replLoop 
 
 processInput :: String -> EvalState -> IO EvalState
 processInput input state =
-    case parseTokens $ tokenizer input of
+    case parseTokens $ tokenizer input of       -- handle parsing
         Left err -> (putStrLn $ prettyErr err) >> pure state
         Right program -> do
-            result <- evalProgram program state
+            result <- evalProgram program state -- handle evaluation of program
             case result of
                 Left err -> (putStrLn $ prettyErr err) >> pure state
-                Right newState -> do
-                    printLastVal newState
-                    pure newState
+                Right newState -> do           
+                    printLastVal newState state  -- print top value stack
+                    pure newState                -- return new state
 
 
 -- Helper functions to print out stack and dictionary
@@ -47,11 +50,12 @@ processInput input state =
 printStack :: EvalState -> IO ()
 printStack (stk,_) = putStrLn $ "Stack: " ++ show stk
 
-printLastVal :: EvalState -> IO () 
-printLastVal (stk,_) = 
-    case stk of
-        [] -> putStrLn "Stack is empty..."
-        _ -> putStrLn $ show (last stk)
+printLastVal :: EvalState -> EvalState -> IO () 
+printLastVal (x:_,_) (oldStk,_) = 
+    if (x:oldStk) == oldStk         -- check if old state is the same
+        then putStr ""              -- newline
+        else putStrLn $ show x      -- show the top of the stack 
+printLastVal ([],_) _ = putStr ""   -- newline
 
 printDictionary :: EvalState -> IO ()
 printDictionary (_,eval) = putStrLn $ "Map: " ++ show eval

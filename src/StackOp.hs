@@ -20,5 +20,5 @@ dup ([],_) = pure $ Left (RunTime StackEmpty)
 dup (x:xs,dict) = pure $ Right (x:x:xs,dict)
 
 swap :: EvalState -> IO (Either BprogError EvalState)
-swap (_,_) = pure $ Left (RunTime StackEmpty)
 swap (x:y:xs,dict) = pure $ Right (y:x:xs,dict)
+swap (_,_) = pure $ Left (RunTime StackEmpty)

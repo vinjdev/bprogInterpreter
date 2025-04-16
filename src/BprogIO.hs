@@ -10,9 +10,9 @@ import System.IO (hFlush, stdout)
 
 printOp :: EvalState -> IO (Either BprogError EvalState)
 printOp ([],_) = pure $ Left (RunTime StackEmpty)
-printOp (x:xs,dict) = do
+printOp (stk@(x:_),dict) = do
     print x
-    pure $ Right (xs,dict)
+    pure $ Right (stk,dict)
 
 readOp :: EvalState -> IO (Either BprogError EvalState)
 readOp ([],_) = pure $ Left (RunTime StackEmpty)
