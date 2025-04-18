@@ -23,14 +23,6 @@ import Control.Monad (foldM)
 evalProgram :: [Types] -> EvalState -> IO (Either BprogError EvalState)
 evalProgram [] state = pure $ Right state
 
--- Look ahead function for "swap"
-evalProgram (val1 : val2 : Tag "swap" : rest) (stk,dict) =
-    evalProgram rest (val1:val2:stk,dict)
-
--- Look ahead function for function assignment ":="
-evalProgram (Tag name : value : Tag ":=" : rest) (stk,dict) =
-    evalProgram  rest (stk,Map.insert name value dict)
-
 -- Look ahead function for function assignment "fun"
 evalProgram (Tag name : value : Tag "fun" : rest) (stk,dict) = 
     evalProgram rest (stk,Map.insert name value dict)
