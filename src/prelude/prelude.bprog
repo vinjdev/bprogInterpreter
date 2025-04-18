@@ -4,3 +4,11 @@
 print
 
 { " This is a test " } exec
+
+5 times { " hello world " print }
+
+i 10 :=
+" running loop " print
+loop { i 0 > } { i print i 1 - i swap := }
+
+" running loop success " print

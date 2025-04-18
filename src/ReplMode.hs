@@ -6,6 +6,7 @@ import Types
 import Errors
 import Parser
 import Interpreter
+import BprogIO
 import System.IO (hFlush, stdout)
 import qualified Data.Map as Map
 
@@ -52,10 +53,10 @@ printStack (stk,_) = putStrLn $ "Stack: " ++ show stk
 
 printLastVal :: EvalState -> EvalState -> IO () 
 printLastVal (x:_,_) (oldStk,_) = 
-    if (x:oldStk) == oldStk         -- check if old state is the same
-        then putStr ""              -- newline
-        else putStrLn $ show x      -- show the top of the stack 
-printLastVal ([],_) _ = putStr ""   -- newline
+    if (x:oldStk) == oldStk            -- check if old state is the same
+        then putStr ""                 -- newline
+        else putStrLn $ prettyValue x
+printLastVal ([],_) _ = putStr ""      -- newline
 
 printDictionary :: EvalState -> IO ()
 printDictionary (_,eval) = putStrLn $ "Map: " ++ show eval

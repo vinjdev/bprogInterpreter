@@ -19,13 +19,15 @@ tokenizer :: String -> [String]
 tokenizer = words
 
 -- | ParseTokens
+-- parses string input into bprog types. This is not a stack, it only assigns
+-- data to data types, which has yet to be evaluated
 --
 -- >>> parseTokens ["{", "1", "2", "+","}", "[","3","4","]"]
 -- Right [Block [Numbo 1,Numbo 2,Tag "+"],Bag [Numbo 3,Numbo 4]]
 --
 -- >>> parseTokens ["\"","hello","\""]
 -- Right [Wordsy "hello"]
-parseTokens :: [String] -> Either BprogError [Types]
+parseTokens :: [String] -> Either BprogError [Types] 
 parseTokens [] = Right [] 
 parseTokens (tok:toks) 
     -- Code Block { ... }
