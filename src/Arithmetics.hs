@@ -7,19 +7,73 @@ import Types
 import Errors
 
 arithmeticsOps :: [String]
-arithmeticsOps = ["+", "-", "*","/","<",">"]
+arithmeticsOps = ["+", "-", "*","/","div","<",">", "==","&&","||", "not"]
 
-evalArithmetics :: String -> EvalState -> IO(Either BprogError EvalState)
+evalArithmetics :: String -> EvalState -> IO (Either BprogError EvalState)
 evalArithmetics op (stk,dict) = case (op,stk) of
+    -- Integer arithmetics
     ("+", Numbo n2 : Numbo n1 : rest) -> pure $ Right (Numbo (n1+n2) : rest,dict) 
-    ("-", Numbo n2 : Numbo n1 : rest) -> pure $ Right (Numbo (n1-n2) : rest,dict) 
-    ("*", Numbo n2 : Numbo n1 : rest) -> pure $ Right (Numbo (n1*n2) : rest,dict) 
-    ("/", Numbo 0 : _ : _) -> pure $ Left (RunTime DivisionByZero)
-    ("/", Numbo n : Numbo n2 : rest) -> pure $ Right (Numbo (div n2 n) : rest,dict) 
+    ("+", Numbo n2 : Deci f1 : rest) -> pure $ Right (Deci (f1+fromIntegral n2) : rest,dict) 
+    ("+", Deci f2 : Numbo n1 : rest) -> pure $ Right (Deci (fromIntegral n1 + f2) : rest,dict) 
+    ("+", Deci f2 : Deci f1 : rest) -> pure $ Right (Deci (f1+f2) : rest,dict) 
 
+    ("-", Numbo n2 : Numbo n1 : rest) -> pure $ Right (Numbo (n1-n2) : rest,dict) 
+    ("-", Numbo n2 : Deci f1 : rest) -> pure $ Right (Deci (f1-fromIntegral n2) : rest,dict) 
+    ("-", Deci f2 : Numbo n1 : rest) -> pure $ Right (Deci (fromIntegral n1 - f2) : rest,dict) 
+    ("-", Deci f2 : Deci f1 : rest) -> pure $ Right (Deci (f1-f2) : rest,dict)
+
+    ("*", Numbo n2 : Numbo n1 : rest) -> pure $ Right (Numbo (n1*n2) : rest,dict) 
+    ("*", Numbo n2 : Deci f1 : rest) -> pure $ Right (Deci (f1*fromIntegral n2) : rest,dict) 
+    ("*", Deci f2 : Numbo n1 : rest) -> pure $ Right (Deci (fromIntegral n1*f2) : rest,dict) 
+    ("*", Deci f2 : Deci f1 : rest) -> pure $ Right (Deci (f1*f2) : rest,dict) 
+
+    -- Integer division
+    ("div", Numbo 0 : _ : _) -> pure $ Left (RunTime DivisionByZero)
+    ("div", Numbo n2 : Numbo n1 : rest) -> pure $ Right (Numbo (div n1 n2) : rest,dict) 
+
+    ("div", Deci 0.0 : _ : _) -> pure $ Left (RunTime DivisionByZero)
+    ("div", Deci f2 : Numbo n1 : rest) -> pure $ Right (Numbo (div n1 (truncate f2)) : rest,dict)
+    
+    ("div", Numbo 0 : _ : _) -> pure $ Left (RunTime DivisionByZero)
+    ("div", Numbo n2 : Deci f1 : rest) -> pure $ Right (Numbo (div (truncate f1) n2) : rest,dict)
+
+    ("div", Deci 0.0 : _ : _) -> pure $ Left (RunTime DivisionByZero)
+    ("div", Deci f2 : Deci f1 : rest) -> 
+        pure $ Right (Numbo (div (truncate f1) (truncate f2)) : rest,dict)
+    
+    -- Float division
+    ("/", Numbo 0 : Numbo _ : _) -> pure $ Left (RunTime DivisionByZero)
+    ("/", Numbo n2 : Numbo n1 : rest) -> 
+        pure $ Right (Deci (fromIntegral n1 / fromIntegral n2) : rest,dict) 
+
+    ("/", Numbo 0 : Deci _ : _) -> pure $ Left (RunTime DivisionByZero) 
+    ("/", Numbo n2 : Deci n1 : rest) -> pure $ Right (Deci ( n1 / fromIntegral n2) : rest,dict) 
+
+    ("/", Deci 0.0 : Numbo _ : _) -> pure $ Left (RunTime DivisionByZero) 
+    ("/", Deci n2 : Numbo n1 : rest) -> pure $ Right (Deci (fromIntegral n1 / n2) : rest,dict) 
+
+    ("/", Deci 0.0 : Deci _ : _) -> pure $ Left (RunTime DivisionByZero)  
+    ("/", Deci f2 : Deci f1 : rest) -> pure $ Right (Deci (f1 / f2) : rest,dict) 
+
+    
     ("<", Numbo n2 : Numbo n1 : rest) -> pure $ Right (Truthy (n1 < n2) : rest,dict)
-    ("<", _ : _ : _) -> pure $ Left (RunTime ExpectedBoolOrNumber) 
+    ("<", Deci f2 : Numbo n1 : rest) -> pure $ Right (Truthy (fromIntegral n1 < f2) : rest,dict)
+    ("<", Deci f2 : Deci f1 : rest) -> pure $ Right (Truthy (f1 < f2) : rest,dict)
+    
     (">", Numbo n2 : Numbo n1 : rest) -> pure $ Right (Truthy (n1 > n2) : rest,dict)
+    (">", Deci f2 : Numbo n1 : rest) -> pure $ Right (Truthy (fromIntegral n1 > f2) : rest,dict)
+    (">", Deci f2 : Deci f1 : rest) -> pure $ Right (Truthy (f1 > f2) : rest,dict)
+
     (">", _ : _ : _) -> pure $ Left (RunTime ExpectedBoolOrNumber) 
+    ("<", _ : _ : _) -> pure $ Left (RunTime ExpectedBoolOrNumber) 
+
+    ("==", Deci f2 : Numbo n1 : rest) -> pure $ Right (Truthy (fromIntegral n1 == f2) : rest,dict)
+    ("==", Numbo n2 : Deci f1 : rest) -> pure $ Right (Truthy (f1 == fromIntegral n2) : rest,dict)
+    ("==", b : a : rest) -> pure $ Right (Truthy (a == b) : rest,dict)
+
+    ("&&", Truthy b2 : Truthy b1 : rest) -> pure $ Right (Truthy (b1 && b2) : rest,dict)
+    ("||", Truthy b2 : Truthy b1 : rest) -> pure $ Right (Truthy (b1 || b2) : rest,dict)
+
+    ("not", Truthy b : rest) -> pure $ Right (Truthy (if b == True then False else True) : rest,dict)
 
     _ -> pure $ Left (RunTime ExpectedBoolOrNumber)

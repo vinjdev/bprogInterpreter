@@ -31,6 +31,7 @@ library
       Interpreter
       ListOp
       NormalMode
+      ParseOp
       Parser
       ReplMode
       StackOp
@@ -61,6 +62,7 @@ executable bprog-exe
       base >=4.7 && <5
     , bprog
     , containers
+    , hspec
   default-language: Haskell2010
 
 test-suite bprog-test
@@ -78,4 +80,5 @@ test-suite bprog-test
     , bprog
     , containers
     , doctest
+    , hspec
   default-language: Haskell2010

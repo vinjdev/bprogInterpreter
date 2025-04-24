@@ -7,8 +7,9 @@ print
 
 5 times { " hello world " print }
 
-i 10 :=
+i { 10 } :=
+decrementI { i }
 " running loop " print
-loop { i 0 > } { i print i 1 - i swap := }
+loop { i 0 > } { i print { i 1 - } i swap := }
 
 " running loop success " print

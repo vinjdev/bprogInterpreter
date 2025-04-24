@@ -50,6 +50,7 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - bprog
+    - hspec
 
 tests:
   bprog-test:
@@ -62,3 +63,4 @@ tests:
     dependencies:
     - bprog
     - doctest
+    - hspec

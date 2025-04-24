@@ -6,6 +6,7 @@ module BprogIO (
 
 import Types
 import Errors
+import Data.List (intersperse)
 import System.IO (hFlush, stdout)
 
 prettyValue :: Types -> String
@@ -14,9 +15,17 @@ prettyValue val = case val of
     Deci f -> show f
     Truthy b -> if b then "True" else "False"
     Wordsy str -> show str
-    Bag list -> "[ " ++ unwords (map prettyValue list) ++ " ]"
+    Bag list -> "[" ++ listPritty list ++ "]"
     Block code -> "{ " ++ unwords (map prettyValue code) ++ " }"
-    Tag t -> show t
+    Tag t -> t
+
+-- Helper function for prettyValue
+-- maps pretty value for getting correct format 
+-- intersperse a komma ,
+-- concat flattens out the list to be a string
+-- [Numbo 1, Numbo 2] -> ["1", "2"] -> ["1",",","2"] -> "1,2"
+listPritty :: [Types] -> String
+listPritty = concat . intersperse "," . map prettyValue
 
 
 printOp :: EvalState -> IO (Either BprogError EvalState)

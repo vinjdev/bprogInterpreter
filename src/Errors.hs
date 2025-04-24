@@ -20,6 +20,8 @@ data ProgramError
    | ExpectedQuotation
    | ExpectedList
    | ExpectedVariable
+   | ExpectedInteger
+   | ExpectedString
    | DivisionByZero
    | ProgramFinishedWithMultipleValues
    | NumberConversionError
@@ -42,6 +44,8 @@ prettyErr (RunTime err) = case err of
     ExpectedQuotation -> "ERROR RUNTIME: Expected a quatation block"
     ExpectedList -> "ERROR RUNTIME: Expected a list"
     ExpectedVariable -> "ERROR RUNTIME: Expected a variable"
+    ExpectedInteger -> "EROOR RUNTIME: Expected a integer"
+    ExpectedString -> "ERROR RUNTIME: Expected a string"
     DivisionByZero -> "ERROR RUNTIME: Division by zero"
     ProgramFinishedWithMultipleValues -> "ERROR RUNTIME: Stack is not empty after execution"
     NumberConversionError -> "ERROR RUNTIME: Could not convert value"
