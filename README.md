@@ -7,7 +7,7 @@ A simple interpreted stack based programming language written in haskell
 - Stack manipulation: `dup`, `swap`, `pop`
 - Lists: `[ 1 2 3 ]`
 - Blocks and control flow: `{ ... }`, `if`, `loop`, `times`
-- Variables: `42 :=x`, `x`
+- Variables: `x 42 :=`, `x`
 - Print and Read: `print`, `read`
 - List operations: `head`, `tail`, `empty`, `length`, `cons` `append`, `each`, `map`, `foldl`
 
