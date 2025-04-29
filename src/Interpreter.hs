@@ -25,6 +25,17 @@ import Control.Monad (foldM)
 evalProgram :: [Types] -> EvalState -> IO (Either BprogError EvalState)
 evalProgram [] state = pure $ Right state
 
+-- Special case for if
+
+evalProgram (Tag "if" : trueBlock : falseBlock : _ ) (Truthy b : stk,dict) = do
+    let checkCode = if b then trueBlock else falseBlock 
+    case checkCode of
+        Block code -> evalProgram code (stk,dict)
+        _ -> eval checkCode (stk,dict)
+
+evalProgram (Tag "if" : _ : _ : _ ) (_:_, _) = 
+    pure $ Left (RunTime ExpectedBool)
+
 -- Evaluation loop
 evalProgram (x:xs) state = do
     result <- eval x state
@@ -34,7 +45,8 @@ evalProgram (x:xs) state = do
 
 -- Handles cases of evaluation
 eval :: Types -> EvalState -> IO (Either BprogError EvalState)
-eval val state@(stk,env) = case val of
+eval val state@(stk,dict) = case val of
+
     -- Pushing data types onto the stack
     Numbo n -> push (Numbo n) state
     Deci f -> push (Deci f) state
@@ -43,7 +55,7 @@ eval val state@(stk,env) = case val of
 
     -- Pushing a list onto the Stack
     Bag xs -> do 
-        newList <- mapM (evalBag env) xs
+        newList <- mapM (evalBag dict) xs
         push (Bag newList) state
     
     -- arithmetics, list and parser operations
@@ -53,12 +65,12 @@ eval val state@(stk,env) = case val of
         | elem op arithmeticsOps -> 
             case stk of
                 Tag "foldl" : n@(Numbo _) : Bag list : rest ->
-                    evalFoldlBlock [Tag op] n list (rest,env)
+                    evalFoldlBlock [Tag op] n list (rest,dict)
                 Tag "foldl" : _ : _ : _ -> 
                     pure $ Left (RunTime ExpectedList)
 
                 Tag "times" : Numbo n : rest ->
-                    evalTimesBlock [Tag op] n (rest,env)
+                    evalTimesBlock [Tag op] n (rest,dict)
                 Tag "Times" : _ : _ ->
                     pure $ Left (RunTime ExpectedInteger)
                 _ -> evalArithmetics op state
@@ -66,14 +78,14 @@ eval val state@(stk,env) = case val of
         | elem op listOps -> 
             case stk of
                 Tag "times" : Numbo n : rest ->
-                    evalTimesBlock [Tag op] n (rest,env)
+                    evalTimesBlock [Tag op] n (rest,dict)
                 Tag "times" : _ : _ ->
                     pure $ Left (RunTime ExpectedInteger)
                 _ -> evalListOp op state
         | elem op parseOps -> 
             case stk of
                 Tag "each" : Bag list : rest ->
-                    evalEachBlock [Tag op] list (rest,env)
+                    evalEachBlock [Tag op] list (rest,dict)
                 Tag "each" : _ : _ ->
                     pure $ Left (RunTime ExpectedList)
                 _ -> evalParse op state
@@ -90,63 +102,50 @@ eval val state@(stk,env) = case val of
     -- Function and variable assignment
     Tag ":=" -> 
         case stk of
-            value : Tag name : rest -> pure $ Right (rest, Map.insert name value env)
+            value : Tag name : rest -> pure $ Right (rest, Map.insert name value dict)
             _                       -> pure $ Left (RunTime ExpectedVariable)
 
     Tag "fun" -> 
         case stk of
-            value : Tag name : rest -> pure $ Right (rest, Map.insert name value env)
+            value : Tag name : rest -> pure $ Right (rest, Map.insert name value dict)
             _                     -> pure $ Left (RunTime ExpectedVariable)
 
     -- Executes a code block, which is at the top of the stack
     Tag "exec" ->
         case stk of
-            Block code : rest -> evalProgram code (rest,env)
+            Block code : rest -> evalProgram code (rest,dict)
             _ -> pure $ Left (RunTime ExpectedQuotation)
 
     -- Function call, or push 
     Tag sym -> 
-        case Map.lookup sym env of
+        case Map.lookup sym dict of
             Just (Block body) -> evalProgram body state
-            Just value -> push value state                  
+            Just value -> push value state   
             Nothing  -> push (Tag sym) state
                        
-        
 
     -- Code Block operations
     Block code -> 
         case stk of
-            Tag "each" : Bag list : rest -> evalEachBlock code list (rest,env)
+            Tag "each" : Bag list : rest -> evalEachBlock code list (rest,dict)
             Tag "each" : _ : _ -> pure $ Left (RunTime ExpectedList)
                 
-            Tag "map" : Bag list : rest -> evalMapBlock code list (rest,env)
+            Tag "map" : Bag list : rest -> evalMapBlock code list (rest,dict)
             Tag "map" : _ : _ -> pure $ Left (RunTime ExpectedList)
                 
-            Tag "foldl" : n@(Numbo _) : Bag list : rest -> evalFoldlBlock code n list (rest,env) -- foldl have special notation
+            Tag "foldl" : n@(Numbo _) : Bag list : rest -> evalFoldlBlock code n list (rest,dict) -- foldl have special notation
             Tag "foldl" : _ : _ : _ -> pure $ Left (RunTime ExpectedList)                        -- Needs to retain Numbo Type
 
             -- Times
-            Tag "times" : Numbo n : rest -> evalTimesBlock code n (rest,env)
+            Tag "times" : Numbo n : rest -> evalTimesBlock code n (rest,dict)
             Tag "times" : _ : _ -> pure $ Left (RunTime ExpectedBoolOrNumber)
-
-
-            Block thenBlock : Tag "if" : Truthy b : rest ->
-                if Truthy b == Truthy True then evalProgram thenBlock (rest,env) -- true block
-                                           else evalProgram code (rest,env)      -- false block
-            val : Tag "if" : Truthy b : rest ->
-                 if Truthy b == Truthy True then evalProgram [val] (rest,env) -- true block
-                                           else evalProgram code (rest,env)      -- false block
-
-
-            Block _ : Tag "if" : _ : _ -> pure $ Left (RunTime ExpectedBool)
-
             -- Loop: BREAKS ON TRUE
-            Block breakCond : Tag "loop" : rest -> evalLoopBlock breakCond code (rest,env) 
+            Block breakCond : Tag "loop" : rest -> evalLoopBlock breakCond code (rest,dict) 
 
             -- pushing code block to stack, if no operations
             _ -> push (Block code) state
 
-evalBag :: Dictionary -> Types -> IO(Types)
+evalBag :: Dictionary -> Types -> IO (Types)
 evalBag dict val = case val of
                         Tag name -> case Map.lookup name dict of
                                         Just value -> pure value
