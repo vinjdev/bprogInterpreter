@@ -35,15 +35,20 @@ evalProgram (x:xs) state = do
 -- Handles cases of evaluation
 eval :: Types -> EvalState -> IO (Either BprogError EvalState)
 eval val state@(stk,env) = case val of
-
     -- Pushing data types onto the stack
     Numbo n -> push (Numbo n) state
     Deci f -> push (Deci f) state
     Truthy b -> push (Truthy b) state 
     Wordsy s -> push (Wordsy s) state 
-    Bag xs -> push (Bag xs) state
+
+    -- Pushing a list onto the Stack
+    Bag xs -> do 
+        newList <- mapM (evalBag env) xs
+        push (Bag newList) state
     
     -- arithmetics, list and parser operations
+    --
+    -- One special case for Foldl operataion
     Tag op
         | elem op arithmeticsOps -> 
             case stk of
@@ -51,6 +56,11 @@ eval val state@(stk,env) = case val of
                     evalFoldlBlock [Tag op] n list (rest,env)
                 Tag "foldl" : _ : _ : _ -> 
                     pure $ Left (RunTime ExpectedList)
+
+                Tag "times" : Numbo n : rest ->
+                    evalTimesBlock [Tag op] n (rest,env)
+                Tag "Times" : _ : _ ->
+                    pure $ Left (RunTime ExpectedInteger)
                 _ -> evalArithmetics op state
 
         | elem op listOps -> 
@@ -60,7 +70,13 @@ eval val state@(stk,env) = case val of
                 Tag "times" : _ : _ ->
                     pure $ Left (RunTime ExpectedInteger)
                 _ -> evalListOp op state
-        | elem op parseOps -> evalParse op state
+        | elem op parseOps -> 
+            case stk of
+                Tag "each" : Bag list : rest ->
+                    evalEachBlock [Tag op] list (rest,env)
+                Tag "each" : _ : _ ->
+                    pure $ Left (RunTime ExpectedList)
+                _ -> evalParse op state
 
     -- Stack operations
     Tag "dup" -> dup state
@@ -70,10 +86,6 @@ eval val state@(stk,env) = case val of
     -- IO Operations
     Tag "print" -> printOp state 
     Tag "read" -> readOp state
-
-    -- Generic tag case
-    
-            
     
     -- Function and variable assignment
     Tag ":=" -> 
@@ -95,7 +107,7 @@ eval val state@(stk,env) = case val of
     -- Function call, or push 
     Tag sym -> 
         case Map.lookup sym env of
-            Just (Block body) -> evalProgram body state     
+            Just (Block body) -> evalProgram body state
             Just value -> push value state                  
             Nothing  -> push (Tag sym) state
                        
@@ -113,23 +125,34 @@ eval val state@(stk,env) = case val of
             Tag "foldl" : n@(Numbo _) : Bag list : rest -> evalFoldlBlock code n list (rest,env) -- foldl have special notation
             Tag "foldl" : _ : _ : _ -> pure $ Left (RunTime ExpectedList)                        -- Needs to retain Numbo Type
 
+            -- Times
+            Tag "times" : Numbo n : rest -> evalTimesBlock code n (rest,env)
+            Tag "times" : _ : _ -> pure $ Left (RunTime ExpectedBoolOrNumber)
+
+
             Block thenBlock : Tag "if" : Truthy b : rest ->
                 if Truthy b == Truthy True then evalProgram thenBlock (rest,env) -- true block
                                            else evalProgram code (rest,env)      -- false block
+            val : Tag "if" : Truthy b : rest ->
+                 if Truthy b == Truthy True then evalProgram [val] (rest,env) -- true block
+                                           else evalProgram code (rest,env)      -- false block
+
 
             Block _ : Tag "if" : _ : _ -> pure $ Left (RunTime ExpectedBool)
 
             -- Loop: BREAKS ON TRUE
             Block breakCond : Tag "loop" : rest -> evalLoopBlock breakCond code (rest,env) 
 
-            -- Times
-            Tag "times" : Numbo n : rest -> evalTimesBlock code n (rest,env)
-            Tag "times" : _ : _ -> pure $ Left (RunTime ExpectedBoolOrNumber)
-                
-
             -- pushing code block to stack, if no operations
             _ -> push (Block code) state
-    
+
+evalBag :: Dictionary -> Types -> IO(Types)
+evalBag dict val = case val of
+                        Tag name -> case Map.lookup name dict of
+                                        Just value -> pure value
+                                        Nothing -> pure (Tag name) -- Nothing found in dictationy
+                        other -> pure other
+                        
 
 evalEachBlock :: [Types] -> [Types] -> EvalState -> IO(Either BprogError EvalState)
 evalEachBlock code list (rest,dict) = do
