@@ -3,48 +3,89 @@ module ListOp (
     evalListOp,
 ) where
 
+-- OPERATIONS ON LIST, CODE BLOCK, STRING
+
 import Types
 import Errors
+import StackOp
 
+-- Allowed operations
 listOps :: [String]
 listOps = ["head", "tail", "empty", "length", "cons", "append"]
 
 evalListOp :: String -> EvalState -> IO (Either BprogError EvalState)
 
 -- Head operation
-evalListOp "head" (Bag (x:_): rest,dict) = pure $ Right (x : rest,dict)
-evalListOp "head" (Bag [] : _,_)        = pure $ Left  (RunTime ExpectedList)
-
-evalListOp "head" (Wordsy (c:_): rest,dict) = pure $ Right (Wordsy [c] : rest,dict)
-evalListOp "head" (Wordsy [] : _,_)        = pure $ Left  (RunTime ExpectedList)
+--
+-- Takes the first values of a List, Block or a String
+evalListOp "head" (x:xs,dict) = 
+        case x of
+            Bag (h:_) -> push h (xs,dict)
+            Block (h:_) -> push h (xs,dict)
+            Wordsy (h:_) -> push (Wordsy [h]) (xs,dict)
+            _ -> pure $ Left (RunTime ExpectedList)
 
 -- Tail operation
-evalListOp "tail" (Bag (_:xs) : rest,dict) = pure $ Right (Bag (xs):rest,dict)
-evalListOp "tail" (Bag [] : _,_) = pure $ Left (RunTime ExpectedList)
-
-evalListOp "tail" (Wordsy (_:xs) : rest,dict) = pure $ Right (Wordsy(xs):rest,dict)
-evalListOp "tail" (Wordsy [] : _,_) = pure $ Left (RunTime ExpectedList)
+-- 
+-- Removes the first element of a List, Block and a String
+evalListOp "tail" (x:xs,dict) = 
+    case x of 
+        Bag (_:t) -> push (Bag t) (xs,dict)
+        Block (_:t) -> push (Block t) (xs,dict)
+        Wordsy (_:t) -> push (Wordsy t) (xs,dict)
+        _ -> pure $ Left (RunTime ExpectedList) 
 
 -- Empty operation
-evalListOp "empty" (Bag xs : rest,dict) = pure $ Right (Truthy (null xs):rest,dict)
-evalListOp "empty" (Wordsy xs : rest,dict) = pure $ Right (Truthy (null xs):rest,dict)
+--
+-- Boolean operaiton that checks if a List, Block or String is empty
+evalListOp "empty" (x:xs,dict) =  
+    case x of
+        Bag l -> push (Truthy (null l)) (xs,dict)
+        Block code -> push (Truthy (null code)) (xs,dict) 
+        Wordsy str -> push (Truthy (null str)) (xs,dict) 
+        _ -> pure $ Left (RunTime ExpectedList)
 
--- Length operations
-evalListOp "length" (Bag xs : rest,dict) = pure $ Right (Numbo(convert xs):rest,dict)
+-- Length operation
+-- 
+-- Counts the sum of elements in a List, Block or String
+evalListOp "length" (x:xs,dict) =
+    case x of
+        Bag l -> push (Numbo (convert l)) (xs,dict)
+        Block code -> push (Numbo (convert code)) (xs,dict) 
+        Wordsy str -> push (Numbo (convert str)) (xs,dict) 
+        _ -> pure $ Left (RunTime ExpectedList)
     where
         convert = toInteger . length
 
-evalListOp "length" (Wordsy xs : rest,dict) = pure $ Right (Numbo(convert xs):rest,dict)
-    where
-        convert = toInteger . length
+-- Cons operation
+--
+-- Append a Value to the begining of a List, Block or a string
+-- SPECIAL RULE:
+-- adding value to a string needs to be of same value
+evalListOp "cons" (x:val:xs,dict) =
+    case x of
+        Bag ls -> push (Bag (val:ls)) (xs,dict)
+        Block code -> push (Block (val:code)) (xs,dict)
+        Wordsy str -> case val of
+                        Wordsy [c] -> push (Wordsy (c:str)) (xs,dict)
+                        _ -> pure $ Left (RunTime ExpectedString)
+        _ -> pure $ Left (RunTime ExpectedList)
 
-
-evalListOp "cons" (Bag xs : val : rest,dict) = pure $ Right (Bag (val:xs) : rest,dict)
-evalListOp "cons" (Wordsy xs : Wordsy [c] : rest,dict) = pure $ Right (Wordsy (c:xs) : rest,dict)
-evalListOp "cons" (Wordsy _ : _ : _,_) = pure $ Left (RunTime ExpectedList) 
-
-evalListOp "append" (Bag l2 : Bag l1 : rest,dict) = pure $ Right (Bag (l1 ++ l2) : rest,dict)
-evalListOp "append" (Wordsy l2 : Wordsy l1 : rest,dict) = pure $ Right (Wordsy (l1 ++ l2) : rest,dict)
+-- Append operation
+--
+-- Adding a List, Block or String to another of the same type
+evalListOp "append" (x:val:xs,dict) =
+    case x of
+        Bag l2 -> case val of
+                    Bag l1 -> push (Bag (l1 ++ l2)) (xs,dict)  
+                    _ -> pure $ Left (RunTime ExpectedList)
+        Block c2 -> case val of
+                    Block c1 -> push (Block (c1 ++ c2)) (xs,dict)  
+                    _ -> pure $ Left (RunTime ExpectedList)
+        Wordsy str2 -> case val of
+                    Wordsy str1 -> push (Wordsy (str1 ++ str2)) (xs,dict)  
+                    _ -> pure $ Left (RunTime ExpectedList)
+        _ -> pure $ Left (RunTime ExpectedList)
 
 evalListOp _ _ = pure $ Left (RunTime ExpectedList)
 

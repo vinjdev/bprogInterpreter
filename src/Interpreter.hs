@@ -7,10 +7,10 @@ module Interpreter (
 -- Runtime evaluations
 import Types
 import Errors
+import StackOp
 import qualified Data.Map as Map
 import Arithmetics
 import ListOp
-import StackOp
 import BprogIO
 import ParseOp
 import Control.Monad (foldM)
@@ -41,23 +41,25 @@ eval val state@(stk,env) = case val of
     Deci f -> push (Deci f) state
     Truthy b -> push (Truthy b) state 
     Wordsy s -> push (Wordsy s) state 
-    -- Handle evaluations within the list
-    Bag xs -> do
-        result <- mapM (\x -> evalProgram [x] state) xs
-        case sequence result of
-            Left err -> pure $ Left err
-            Right newState -> case traverse extractTop newState of
-                Nothing -> pure $ Left (RunTime ExpectedVariable)
-                Just evaluated -> push (Bag evaluated) state 
-
-        where
-            extractTop (x:_,_) = Just x
-            extractTop _ = Nothing
+    Bag xs -> push (Bag xs) state
     
     -- arithmetics, list and parser operations
     Tag op
-        | elem op arithmeticsOps -> evalArithmetics op state
-        | elem op listOps -> evalListOp op state
+        | elem op arithmeticsOps -> 
+            case stk of
+                Tag "foldl" : n@(Numbo _) : Bag list : rest ->
+                    evalFoldlBlock [Tag op] n list (rest,env)
+                Tag "foldl" : _ : _ : _ -> 
+                    pure $ Left (RunTime ExpectedList)
+                _ -> evalArithmetics op state
+
+        | elem op listOps -> 
+            case stk of
+                Tag "times" : Numbo n : rest ->
+                    evalTimesBlock [Tag op] n (rest,env)
+                Tag "times" : _ : _ ->
+                    pure $ Left (RunTime ExpectedInteger)
+                _ -> evalListOp op state
         | elem op parseOps -> evalParse op state
 
     -- Stack operations
@@ -68,6 +70,10 @@ eval val state@(stk,env) = case val of
     -- IO Operations
     Tag "print" -> printOp state 
     Tag "read" -> readOp state
+
+    -- Generic tag case
+    
+            
     
     -- Function and variable assignment
     Tag ":=" -> 
@@ -91,7 +97,9 @@ eval val state@(stk,env) = case val of
         case Map.lookup sym env of
             Just (Block body) -> evalProgram body state     
             Just value -> push value state                  
-            Nothing  -> push (Tag sym) state               
+            Nothing  -> push (Tag sym) state
+                       
+        
 
     -- Code Block operations
     Block code -> 
@@ -101,9 +109,10 @@ eval val state@(stk,env) = case val of
                 
             Tag "map" : Bag list : rest -> evalMapBlock code list (rest,env)
             Tag "map" : _ : _ -> pure $ Left (RunTime ExpectedList)
-            
-            --Tag "foldl" : Numbo n : Bag list : rest ->
                 
+            Tag "foldl" : n@(Numbo _) : Bag list : rest -> evalFoldlBlock code n list (rest,env) -- foldl have special notation
+            Tag "foldl" : _ : _ : _ -> pure $ Left (RunTime ExpectedList)                        -- Needs to retain Numbo Type
+
             Block thenBlock : Tag "if" : Truthy b : rest ->
                 if Truthy b == Truthy True then evalProgram thenBlock (rest,env) -- true block
                                            else evalProgram code (rest,env)      -- false block
@@ -120,6 +129,7 @@ eval val state@(stk,env) = case val of
 
             -- pushing code block to stack, if no operations
             _ -> push (Block code) state
+    
 
 evalEachBlock :: [Types] -> [Types] -> EvalState -> IO(Either BprogError EvalState)
 evalEachBlock code list (rest,dict) = do
@@ -133,8 +143,8 @@ evalMapBlock :: [Types] -> [Types] -> EvalState -> IO (Either BprogError EvalSta
 evalMapBlock code list (rest,dict) = do
                 let evalOne el = evalProgram code (el : rest,dict) -- el: element in the list
 
-                result <- mapM evalOne list -- result: [Right ([2],env)]
-                case sequence result of     -- result: Right [([2],env)]
+                result <- mapM evalOne list -- result: [Right ([2],dict)]
+                case sequence result of     -- result: Right [([2],dict)]
                     Left err -> pure $ Left err
                     Right states -> case traverse extractTop states of  
                                         Nothing -> pure $ Left (RunTime ExpectedQuotation)
@@ -142,6 +152,21 @@ evalMapBlock code list (rest,dict) = do
                 where
                     extractTop (x:_,_) = Just x
                     extractTop _ = Nothing
+
+evalFoldlBlock :: [Types] -> Types -> [Types] -> EvalState -> IO (Either BprogError EvalState)
+evalFoldlBlock op n list (rest,dict) = do
+    let runFold acc [] = push acc (rest,dict) 
+        runFold acc (el:els) = do
+            result <- evalProgram op (el : acc : [], dict)
+            case result of
+                Left err -> pure $ Left err
+                Right (newS, _) ->
+                    case newS of
+                        (top:_) -> runFold top els
+                        _ -> pure $ Left (RunTime ExpectedList)
+
+    
+    runFold n list
 
 evalLoopBlock :: [Types] -> [Types] -> EvalState -> IO (Either BprogError EvalState)
 evalLoopBlock breakCond code (rest,dict) = do

@@ -51,6 +51,7 @@ processInput input state =
 printStack :: EvalState -> IO ()
 printStack (stk,_) = putStrLn $ "Stack: " ++ show stk
 
+-- Prints the top value of the stack
 printLastVal :: EvalState -> EvalState -> IO () 
 printLastVal (x:_,_) (oldStk,_) = 
     if (x:oldStk) == oldStk            -- check if old state is the same
