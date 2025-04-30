@@ -8,7 +8,7 @@ import Errors
 
 -- List of allowed arithmetic operations
 arithmeticsOps :: [String]
-arithmeticsOps = ["+", "-", "*","/","div","<",">", "==","&&","||", "not"]
+arithmeticsOps = ["+", "-", "*","/","div","<",">","==","&&","||", "not"]
 
 -- evalArithmetics
 --
@@ -51,10 +51,10 @@ evalArithmetics op (stk,dict) = case (op,stk) of
         pure $ Right (Deci (fromIntegral n1 / fromIntegral n2) : rest,dict) 
 
     ("/", Numbo 0 : Deci _ : _) -> pure $ Left (RunTime DivisionByZero) 
-    ("/", Numbo n2 : Deci n1 : rest) -> pure $ Right (Deci ( n1 / fromIntegral n2) : rest,dict) 
+    ("/", Numbo n2 : Deci f1 : rest) -> pure $ Right (Deci ( f1 / fromIntegral n2) : rest,dict) 
 
     ("/", Deci 0.0 : Numbo _ : _) -> pure $ Left (RunTime DivisionByZero) 
-    ("/", Deci n2 : Numbo n1 : rest) -> pure $ Right (Deci (fromIntegral n1 / n2) : rest,dict) 
+    ("/", Deci f2 : Numbo n1 : rest) -> pure $ Right (Deci (fromIntegral n1 / f2) : rest,dict) 
 
     ("/", Deci 0.0 : Deci _ : _) -> pure $ Left (RunTime DivisionByZero)  
     ("/", Deci f2 : Deci f1 : rest) -> pure $ Right (Deci (f1 / f2) : rest,dict) 
@@ -70,6 +70,7 @@ evalArithmetics op (stk,dict) = case (op,stk) of
 
     (">", _ : _ : _) -> pure $ Left (RunTime ExpectedBoolOrNumber) 
     ("<", _ : _ : _) -> pure $ Left (RunTime ExpectedBoolOrNumber) 
+
 
     ("==", Deci f2 : Numbo n1 : rest) -> pure $ Right (Truthy (fromIntegral n1 == f2) : rest,dict)
     ("==", Numbo n2 : Deci f1 : rest) -> pure $ Right (Truthy (f1 == fromIntegral n2) : rest,dict)

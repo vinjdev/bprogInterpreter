@@ -1,15 +1,8 @@
-3 2 > if
-{ [ 1 2 3 ] map { 10 * } }
-{ " hello " }
-print
+sum { 0 foldl + } fun
 
-{ " This is a test " } exec
+toList { [ ] swap times cons } fun
+gen1toNum { max swap := 1 loop { dup max > } { dup 1 + } } fun
+odd { dup 2 div swap 2 / == if False True } fun
+even { dup 2 div swap 2 / == } fun
 
-5 times { " hello world " print }
-
-i { 10 } :=
-decrementI { i }
-" running loop " print
-loop { i 0 > } { i print { i 1 - } i swap := }
-
-" running loop success " print
+fact { toList 1 foldl * } fun

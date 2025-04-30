@@ -40,8 +40,11 @@ evalProgram (Tag "each" : code : rest ) (Bag list : stk,dict) = do
         Right newState -> evalProgram rest newState
 
 -- map
-evalProgram (Tag "map" : Block code : rest ) (Bag list : stk, dict) = do
-    result <- evalMapBlock code list (stk,dict)
+evalProgram (Tag "map" : code : rest ) (Bag list : stk, dict) = do
+    result <- case code of
+                Block codeB -> evalMapBlock codeB list (stk,dict)
+                Bag _ -> pure $ Left (RunTime ExpectedQuotation)
+                _ -> evalMapBlock [code] list (stk,dict)
     case result of
         Left err -> pure $ Left err
         Right newState -> evalProgram rest newState

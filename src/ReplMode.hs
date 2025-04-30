@@ -14,7 +14,10 @@ import qualified Data.Map as Map
 startRepl :: IO ()
 startRepl = do
     putStrLn "Welcome to the BPROG REPL"
-    replLoop ([],Map.empty) -- initilze the stack and dictionary to be empty
+    let state = ([],Map.empty) 
+    -- load in the prelude library
+    content <- readFile "src/prelude/prelude.bprog"
+    interpretInput content state >>= replLoop
 
 -- repl loop
 replLoop :: EvalState -> IO ()
