@@ -8,9 +8,11 @@ module StackOp (
 import Types
 import Errors
 
+-- Abstraction for pushing value onto stack
 push :: Types -> EvalState -> IO (Either BprogError EvalState)
 push val (stk,dict) = pure $ Right (val : stk,dict)
 
+-- Stack Operations
 pop :: EvalState -> IO (Either BprogError EvalState)
 pop ([],_) = pure $ Left (RunTime StackEmpty)
 pop (_:xs,dict) = pure $ Right (xs,dict)

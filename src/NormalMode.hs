@@ -7,7 +7,7 @@ import Parser
 import Errors
 import qualified Data.Map as Map
 
-
+-- Runs a bprog file, based on a file path
 runNormal :: FilePath -> IO ()
 runNormal path = do
     putStrLn $ "Reading file from: " ++ show path

@@ -6,9 +6,13 @@ module Arithmetics(
 import Types
 import Errors
 
+-- List of allowed arithmetic operations
 arithmeticsOps :: [String]
 arithmeticsOps = ["+", "-", "*","/","div","<",">", "==","&&","||", "not"]
 
+-- evalArithmetics
+--
+-- Will patternmatch after allowed ruleset
 evalArithmetics :: String -> EvalState -> IO (Either BprogError EvalState)
 evalArithmetics op (stk,dict) = case (op,stk) of
     -- Integer arithmetics

@@ -15,14 +15,14 @@ import BprogIO
 import ParseOp
 import Control.Monad (foldM)
 
-
 -- | EvalProgram
 -- Evaluates parsed input with program logic
 -- Eager evaluation, so it will try to evaluate as it runs through 
 -- Returns IO, Error or State (Stack,Dictionary)
 
--- Error Handler
 evalProgram :: [Types] -> EvalState -> IO (Either BprogError EvalState)
+
+-- Returns state when there is no parsed input
 evalProgram [] state = pure $ Right state
 
 --  ================ Special lookahead functions =========================== 
@@ -93,13 +93,15 @@ evalProgram (Tag "times" : _ : _ ) ( _ : _,_) =
 
 
 -- ===================== Evaluation loop =======================================
+
+-- Main evaluation loop
 evalProgram (x:xs) state = do
     result <- eval x state
     case result of
         Left err -> pure $ Left err
         Right newState -> evalProgram xs newState
 
--- Handles cases of evaluation
+-- Handle evaluation for one case
 eval :: Types -> EvalState -> IO (Either BprogError EvalState)
 eval val state@(stk,dict) = case val of
 
@@ -118,8 +120,6 @@ eval val state@(stk,dict) = case val of
     Block code -> push (Block code) state
     
     -- arithmetics, list and parser operations
-    --
-    -- One special case for Foldl operataion
     Tag op
         | elem op arithmeticsOps -> evalArithmetics op state
         | elem op listOps -> evalListOp op state
@@ -158,7 +158,10 @@ eval val state@(stk,dict) = case val of
             Just value -> push value state   
             Nothing  -> push (Tag sym) state
                        
--- ============================= HELPER FUNCTIONS ================================        
+-- ============================= HELPER FUNCTIONS ================================    
+
+-- EvalBag
+-- Checks if there are functions or variables inside a list
 evalBag :: Dictionary -> Types -> IO (Types)
 evalBag dict val = case val of
                         Tag name -> case Map.lookup name dict of
@@ -166,7 +169,12 @@ evalBag dict val = case val of
                                         Nothing -> pure (Tag name) -- Nothing found in dictationy
                         other -> pure other
                         
-
+-- Each 
+-- @param: Code 
+-- @param  List
+-- @returns x amount of new values, based of the length of list
+--
+-- Will run the code on each element in the list
 evalEachBlock :: [Types] -> [Types] -> EvalState -> IO(Either BprogError EvalState)
 evalEachBlock code list (rest,dict) = do
         let runEach acc el = do
@@ -175,6 +183,12 @@ evalEachBlock code list (rest,dict) = do
                     Right (s,d) -> evalProgram code (el : s,d)
         foldM runEach (Right (rest,dict)) list 
 
+-- Map 
+-- @param code
+-- @param list
+-- @returns same list with new properties based on code
+--
+-- Will run the code on each element in the list, and preserves the list
 evalMapBlock :: [Types] -> [Types] -> EvalState -> IO (Either BprogError EvalState)
 evalMapBlock code list (rest,dict) = do
                 let evalOne el = evalProgram code (el : rest,dict) -- el: element in the list
@@ -189,6 +203,12 @@ evalMapBlock code list (rest,dict) = do
                     extractTop (x:_,_) = Just x
                     extractTop _ = Nothing
 
+-- Foldl
+-- @param code
+-- @param Numbo (integer)
+-- @param list
+--
+-- will accumulate a result based on the operation on the list
 evalFoldlBlock :: [Types] -> Types -> [Types] -> EvalState -> IO (Either BprogError EvalState)
 evalFoldlBlock op n list (rest,dict) = do
     let runFold acc [] = push acc (rest,dict) 
@@ -204,6 +224,11 @@ evalFoldlBlock op n list (rest,dict) = do
     
     runFold n list
 
+-- Loop
+-- @param breakCond
+-- @param code
+--
+-- Executes the code in a loop until condition is TRUE
 evalLoopBlock :: [Types] -> [Types] -> EvalState -> IO (Either BprogError EvalState)
 evalLoopBlock breakCond code (rest,dict) = do
                 -- evaluate the break code to be boolean operation
@@ -221,6 +246,11 @@ evalLoopBlock breakCond code (rest,dict) = do
                                 _ -> pure $ Left (RunTime ExpectedBool)
                 runLoop (rest,dict)
 
+-- Times
+-- @param Code
+-- @param Numbo n (Integer)
+--
+-- Loops through a code n amount of times
 evalTimesBlock :: [Types] -> Integer -> EvalState -> IO (Either BprogError EvalState) 
 evalTimesBlock code count (rest,dict) = do
                 let runNTimes 0 state' = pure $ Right state'

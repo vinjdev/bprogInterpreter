@@ -34,7 +34,10 @@ data ParserError
    | IncompleteQuotation
    deriving(Eq, Show)
 
+-- Pretty prints a error message
 prettyErr :: BprogError -> String
+
+-- RunTimes errors
 prettyErr (RunTime err) = case err of
     StackEmpty -> "ERROR RUNTIME: Stack is empty"
     UnknownSymbol -> "ERROR RUNTIME: Unknown symbol"
@@ -50,8 +53,7 @@ prettyErr (RunTime err) = case err of
     ProgramFinishedWithMultipleValues -> "ERROR RUNTIME: Stack is not empty after execution"
     NumberConversionError -> "ERROR RUNTIME: Could not convert value"
 
-
-
+-- Parser errors
 prettyErr (Parse err) = case err of
     IncompleteString -> "ERROR PARSING: Unterminated string."
     IncompleteList -> "ERROR PARSING: Unterminated list."

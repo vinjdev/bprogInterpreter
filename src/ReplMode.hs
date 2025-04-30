@@ -10,12 +10,13 @@ import BprogIO
 import System.IO (hFlush, stdout)
 import qualified Data.Map as Map
 
-
+-- Init the repl mode, with a empty stack and dictionary
 startRepl :: IO ()
 startRepl = do
     putStrLn "Welcome to the BPROG REPL"
     replLoop ([],Map.empty) -- initilze the stack and dictionary to be empty
 
+-- repl loop
 replLoop :: EvalState -> IO ()
 replLoop state = do
     putStr "bprog> "
@@ -31,10 +32,11 @@ replLoop state = do
         ":m" -> printDictionary state >> replLoop state
         ":map" -> printDictionary state >> replLoop state
         -- Make a new State
-        _ -> processInput input state >>= replLoop 
+        _ -> interpretInput input state >>= replLoop 
 
-processInput :: String -> EvalState -> IO EvalState
-processInput input state =
+-- parses and interpret the program
+interpretInput :: String -> EvalState -> IO EvalState
+interpretInput input state =
     case parseTokens $ tokenizer input of       -- handle parsing
         Left err -> (putStrLn $ prettyErr err) >> pure state
         Right program -> do
@@ -48,6 +50,7 @@ processInput input state =
 
 -- Helper functions to print out stack and dictionary
 
+-- Prints the whole stack
 printStack :: EvalState -> IO ()
 printStack (stk,_) = putStrLn $ "Stack: " ++ show stk
 
@@ -59,6 +62,7 @@ printLastVal (x:_,_) (oldStk,_) =
         else putStrLn $ prettyValue x
 printLastVal ([],_) _ = putStr ""      -- newline
 
+-- Prints the whole dictionary
 printDictionary :: EvalState -> IO ()
 printDictionary (_,eval) = putStrLn $ "Map: " ++ show eval
 

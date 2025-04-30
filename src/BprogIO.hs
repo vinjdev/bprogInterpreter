@@ -9,6 +9,11 @@ import Errors
 import Data.List (intersperse)
 import System.IO (hFlush, stdout)
 
+-- Prints out Types in prettier way 
+--
+-- This way it will not print out with types
+-- example:
+-- Numbo 2 -> 2
 prettyValue :: Types -> String
 prettyValue val = case val of
     Numbo n -> show n
@@ -27,13 +32,16 @@ prettyValue val = case val of
 listPritty :: [Types] -> String
 listPritty = concat . intersperse "," . map prettyValue
 
-
+-- Print operation
+--
+-- Takes the top value of the stack
 printOp :: EvalState -> IO (Either BprogError EvalState)
 printOp ([],_) = pure $ Left (RunTime StackEmpty)
 printOp (stk@(x:_),dict) = do
     putStrLn $ prettyValue x
     pure $ Right (stk,dict)
 
+-- reads a input
 readOp :: EvalState -> IO (Either BprogError EvalState)
 readOp ([],_) = pure $ Left (RunTime StackEmpty)
 readOp (stk,dict) = do

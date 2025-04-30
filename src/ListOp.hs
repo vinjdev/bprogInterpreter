@@ -9,7 +9,7 @@ import Types
 import Errors
 import StackOp
 
--- Allowed operations
+-- Allowed operations (each, map and foldl is moved to interpreter.hs)
 listOps :: [String]
 listOps = ["head", "tail", "empty", "length", "cons", "append"]
 

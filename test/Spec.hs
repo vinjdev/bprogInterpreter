@@ -6,6 +6,7 @@ import BprogIO (prettyValue)
 
 -- BPROG INTERPRETER OFFICAL TESTS
 
+-- Virtulized version of the bprog interpreter
 t :: String -> String -> Spec
 t input expected = it input $ do
     case parseTokens $ tokenizer input of
