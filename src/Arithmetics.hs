@@ -62,10 +62,12 @@ evalArithmetics op (stk,dict) = case (op,stk) of
     
     ("<", Numbo n2 : Numbo n1 : rest) -> pure $ Right (Truthy (n1 < n2) : rest,dict)
     ("<", Deci f2 : Numbo n1 : rest) -> pure $ Right (Truthy (fromIntegral n1 < f2) : rest,dict)
+    ("<", Numbo n2 : Deci f1 : rest) -> pure $ Right (Truthy (f1 < fromIntegral n2) : rest,dict)
     ("<", Deci f2 : Deci f1 : rest) -> pure $ Right (Truthy (f1 < f2) : rest,dict)
     
     (">", Numbo n2 : Numbo n1 : rest) -> pure $ Right (Truthy (n1 > n2) : rest,dict)
     (">", Deci f2 : Numbo n1 : rest) -> pure $ Right (Truthy (fromIntegral n1 > f2) : rest,dict)
+    (">", Numbo n2 : Deci f1 : rest) -> pure $ Right (Truthy (f1 > fromIntegral n2) : rest,dict)
     (">", Deci f2 : Deci f1 : rest) -> pure $ Right (Truthy (f1 > f2) : rest,dict)
 
     (">", _ : _ : _) -> pure $ Left (RunTime ExpectedBoolOrNumber) 
