@@ -71,7 +71,7 @@ evalProgram (Tag "if" : trueBlock : falseBlock : rest ) (Truthy b : stk,dict) = 
         Right newState -> evalProgram rest newState
 
 -- if: error case: There is no boolean expression
-evalProgram (Tag "if" : _ : _ : _ ) (_:_, _) = 
+evalProgram (Tag "if" : _ : _ : _ ) (_:_,_) =
     pure $ Left (RunTime ExpectedBool)
 
 -- loop
@@ -80,6 +80,9 @@ evalProgram (Tag "loop" : Block cond : Block code : rest ) (stk,dict) = do
     case result of
         Left err -> pure $ Left err
         Right newState -> evalProgram rest newState
+
+evalProgram (Tag "loop" : _ : _ : _ ) (_,_) =
+    pure $ Left (RunTime ExpectedQuotation)
 
 -- times generic case
 evalProgram (Tag "times" : code : rest ) (Numbo n : stk,dict) = do
@@ -140,11 +143,13 @@ eval val state@(stk,dict) = case val of
     -- Function and variable assignment
     Tag ":=" -> 
         case stk of
+            Tag _ : Tag _ : _ -> pure $ Left (RunTime ExpectedVariable) -- cannot assign a empty Tag
             value : Tag name : rest -> pure $ Right (rest, Map.insert name value dict)
-            _                       -> pure $ Left (RunTime ExpectedVariable)
+            _ -> pure $ Left (RunTime ExpectedVariable)
 
     Tag "fun" -> 
         case stk of
+            Tag _ : Tag _ : _ -> pure $ Left (RunTime ExpectedVariable)
             value : Tag name : rest -> pure $ Right (rest, Map.insert name value dict)
             _                     -> pure $ Left (RunTime ExpectedVariable)
 
@@ -178,9 +183,9 @@ evalBag dict val = case val of
 -- @returns x amount of new values, based of the length of list
 --
 -- Will run the code on each element in the list
-evalEachBlock :: [Types] -> [Types] -> EvalState -> IO(Either BprogError EvalState)
+evalEachBlock :: [Types] -> [Types] -> EvalState -> IO (Either BprogError EvalState)
 evalEachBlock code list (rest,dict) = do
-        let runEach acc el = do
+        let runEach acc el =
                 case acc of
                     Left err -> pure $ Left err
                     Right (s,d) -> evalProgram code (el : s,d)
@@ -201,7 +206,7 @@ evalMapBlock code list (rest,dict) = do
                     Left err -> pure $ Left err
                     Right states -> case traverse extractTop states of  
                                         Nothing -> pure $ Left (RunTime ExpectedQuotation)
-                                        Just newValues -> pure $ Right (Bag newValues : rest,dict)
+                                        Just newValues -> push (Bag newValues) (rest,dict)
                 where
                     extractTop (x:_,_) = Just x
                     extractTop _ = Nothing
@@ -240,13 +245,13 @@ evalLoopBlock breakCond code (rest,dict) = do
                         case condResult of
                             Left err -> pure $ Left err
                             Right (s',d') -> case s' of
-                                (Truthy True : s'') -> pure $ Right (s'',d')
-                                (Truthy False : s'') -> do
+                                (Truthy True : s'') -> pure $ Right (s'',d') -- breaks loop
+                                (Truthy False : s'') -> do                   -- runs loop
                                     bodyResult <- evalProgram code (s'',d')
                                     case bodyResult of
                                         Left err -> pure $ Left err
-                                        Right newState -> runLoop newState                                
-                                _ -> pure $ Left (RunTime ExpectedBool)
+                                        Right newState -> runLoop newState           
+                                _ -> pure $ Left (RunTime ExpectedBool)    -- expects a boolean 
                 runLoop (rest,dict)
 
 -- Times

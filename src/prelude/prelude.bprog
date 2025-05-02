@@ -5,4 +5,4 @@ gen1toNum { max swap := 1 loop { dup max > } { dup 1 + } } fun
 odd { dup 2 div swap 2 / == if False True } fun
 even { dup 2 div swap 2 / == } fun
 
-fact { toList 1 foldl * } fun
+fact { dup 1 == if { pop 1 } { dup 1 - fact * } } fun
