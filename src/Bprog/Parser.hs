@@ -1,4 +1,4 @@
-module Parser (
+module Bprog.Parser (
     tokenizer,
     parseTokens
 ) where
@@ -7,8 +7,11 @@ module Parser (
 -- This module handles all the parsing logic
 -- Reads string input, and apply the bprog data types to it
 
-import Types
-import Errors
+-- Internal libs
+import Bprog.Types
+import Bprog.Errors
+
+-- External libs
 import Text.Read (readMaybe)
 
 -- | Tokenizer

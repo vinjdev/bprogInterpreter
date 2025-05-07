@@ -1,11 +1,14 @@
-module BprogIO (
+module Interpreter.BprogIO (
     prettyValue,
     printOp,
     readOp
 ) where
 
-import Types
-import Errors
+-- Internal libs
+import Bprog.Types
+import Bprog.Errors
+
+-- External libs
 import Data.List (intersperse)
 import System.IO (hFlush, stdout)
 

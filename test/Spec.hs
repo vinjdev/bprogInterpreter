@@ -1,10 +1,13 @@
-import Test.Hspec
-import Parser
-import Interpreter
-import qualified Data.Map as Map
-import BprogIO (prettyValue)
-
 -- BPROG INTERPRETER OFFICAL TESTS
+
+-- Internal libs
+import Bprog.Parser
+import Interpreter.Interpreter
+import Interpreter.BprogIO (prettyValue)
+
+-- External libs
+import Test.Hspec
+import qualified Data.Map as Map
 
 -- Virtulized version of the bprog interpreter
 t :: String -> String -> Spec

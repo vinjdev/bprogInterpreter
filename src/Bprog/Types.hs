@@ -1,10 +1,9 @@
-module Types (
+module Bprog.Types (
     Types(..),
     Stack,
     Dictionary,
     EvalState
 ) where
-
 
 import qualified Data.Map as Map
 

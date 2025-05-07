@@ -1,10 +1,13 @@
-module NormalMode (
+module Bprog.NormalMode (
     runNormal
 ) where
 
-import Interpreter
-import Parser
-import Errors
+-- Internal libs
+import Interpreter.Interpreter
+import Bprog.Parser
+import Bprog.Errors
+
+-- External libs
 import qualified Data.Map as Map
 
 -- Runs a bprog file, based on a file path

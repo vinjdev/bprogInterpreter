@@ -1,10 +1,13 @@
-module ParseOp (
+module Interpreter.ParseOp (
     parseOps,
     evalParse
 ) where
 
-import Types
-import Errors
+-- Internal libs
+import Bprog.Types
+import Bprog.Errors
+
+-- External libs
 import Text.Read (readMaybe)
 
 -- Allowed parse operations

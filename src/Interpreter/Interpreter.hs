@@ -1,18 +1,22 @@
-module Interpreter (
+module Interpreter.Interpreter (
     evalProgram
 ) where
 
 
 -- | Interpreter
 -- Runtime evaluations
-import Types
-import Errors
-import StackOp
+
+-- Internal libs
+import Bprog.Types
+import Bprog.Errors
+import Interpreter.StackOp
+import Interpreter.Arithmetics
+import Interpreter.ListOp
+import Interpreter.BprogIO
+import Interpreter.ParseOp
+
+-- External libs
 import qualified Data.Map as Map
-import Arithmetics
-import ListOp
-import BprogIO
-import ParseOp
 import Control.Monad (foldM)
 
 -- | EvalProgram

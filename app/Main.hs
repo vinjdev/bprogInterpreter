@@ -1,7 +1,10 @@
 module Main (main) where
 
-import ReplMode
-import NormalMode
+-- Internal libs
+import Bprog.ReplMode
+import Bprog.NormalMode
+
+-- external libs
 import System.Environment (getArgs)
 
 -- Evaluates to run NORMAL mode or REPL mode

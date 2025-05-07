@@ -1,10 +1,11 @@
-module Arithmetics(
+module Interpreter.Arithmetics(
     arithmeticsOps,
     evalArithmetics
 ) where
 
-import Types
-import Errors
+-- Internal libs
+import Bprog.Types
+import Bprog.Errors
 
 -- List of allowed arithmetic operations
 arithmeticsOps :: [String]

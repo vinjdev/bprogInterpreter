@@ -1,12 +1,15 @@
-module ReplMode (
+module Bprog.ReplMode (
     startRepl
 ) where
 
-import Types
-import Errors
-import Parser
-import Interpreter
-import BprogIO
+-- Internal libs
+import Bprog.Types
+import Bprog.Errors
+import Bprog.Parser
+import Interpreter.Interpreter
+import Interpreter.BprogIO
+
+-- External libs
 import System.IO (hFlush, stdout)
 import qualified Data.Map as Map
 

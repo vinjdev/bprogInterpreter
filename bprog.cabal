@@ -25,17 +25,17 @@ source-repository head
 
 library
   exposed-modules:
-      Arithmetics
-      BprogIO
-      Errors
-      Interpreter
-      ListOp
-      NormalMode
-      ParseOp
-      Parser
-      ReplMode
-      StackOp
-      Types
+      Bprog.Errors
+      Bprog.NormalMode
+      Bprog.Parser
+      Bprog.ReplMode
+      Bprog.Types
+      Interpreter.Arithmetics
+      Interpreter.BprogIO
+      Interpreter.Interpreter
+      Interpreter.ListOp
+      Interpreter.ParseOp
+      Interpreter.StackOp
   other-modules:
       Paths_bprog
   autogen-modules:

@@ -1,13 +1,13 @@
-module ListOp (
+module Interpreter.ListOp (
     listOps,
     evalListOp,
 ) where
 
 -- OPERATIONS ON LIST, CODE BLOCK, STRING
 
-import Types
-import Errors
-import StackOp
+import Bprog.Types
+import Bprog.Errors
+import Interpreter.StackOp
 
 -- Allowed operations (each, map and foldl is moved to interpreter.hs)
 listOps :: [String]
