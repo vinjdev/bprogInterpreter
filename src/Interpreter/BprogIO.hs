@@ -46,7 +46,6 @@ printOp (stk@(x:_),dict) = do
 
 -- reads a input
 readOp :: EvalState -> IO (Either BprogError EvalState)
-readOp ([],_) = pure $ Left (RunTime StackEmpty)
 readOp (stk,dict) = do
     putStr "Input: "
     hFlush stdout

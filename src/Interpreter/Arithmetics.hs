@@ -83,5 +83,6 @@ evalArithmetics op (stk,dict) = case (op,stk) of
     ("||", Truthy b2 : Truthy b1 : rest) -> pure $ Right (Truthy (b1 || b2) : rest,dict)
 
     ("not", Truthy b : rest) -> pure $ Right (Truthy (if b == True then False else True) : rest,dict)
+    ("not", Numbo n : rest) -> pure $ Right (Numbo (0-n) : rest,dict)
 
     _ -> pure $ Left (RunTime ExpectedBoolOrNumber)
