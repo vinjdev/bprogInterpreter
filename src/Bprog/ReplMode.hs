@@ -17,14 +17,11 @@ import qualified Data.Map as Map
 startRepl :: IO ()
 startRepl = do
     putStrLn "Welcome to the BPROG REPL"
-    let state = ([],Map.empty) 
-    -- load in the prelude library
-    content <- readFile "src/prelude/prelude.bprog"
-    interpretInput content state >>= replLoop
+    replLoop ([],Map.empty) 
 
 -- repl loop
 replLoop :: EvalState -> IO ()
-replLoop state = do
+replLoop state@(stk,_) = do
     putStr "bprog> "
     hFlush stdout
     input <- getLine
@@ -37,6 +34,13 @@ replLoop state = do
         ":stack" -> printStack state >> replLoop state
         ":m" -> printDictionary state >> replLoop state
         ":map" -> printDictionary state >> replLoop state
+        -- Importing prelude library
+        "prelude" -> do
+            putStrLn "Importing prelude library..."
+            content <- readFile "src/prelude/prelude.bprog"
+            interpretInput content state >>= replLoop
+        -- Flushing dictionary
+        ":D" -> replLoop (stk,Map.empty)
         -- Make a new State
         _ -> interpretInput input state >>= replLoop 
 

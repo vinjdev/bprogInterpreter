@@ -29,6 +29,25 @@ bprog>
 ```bash
 stack run path/to/script.bprog
 ```
+## Debugging
+```bash
+# Stack state
+:s
+>>> Stack: [Numbo 2]
+
+# Dictionary state
+:m
+>>> Map: fromList [("age",Numbo 20)]
+
+# Deleting dictionary state
+:D
+```
+# Importing prelude functions
+```bash
+prelude
+```
+see imported functions with `:m`
+
 ## IO
 
 `print`
@@ -86,7 +105,7 @@ List examples
 >>> 1
 
 [ 1 2 3 ] tail
->>> [ 2 3 ]
+>>> [2,3]
 
 [ ] empty
 >>> True
@@ -95,10 +114,10 @@ List examples
 >>> 3
 
 0 [ 1 2 3 ] cons
->>> [ 0 1 2 3 ]
+>>> [0,1,2,3]
 
 [ 1 2 ] [ 3 4 ] append
->>> [ 1 2 3 4 ]
+>>> [1,2,3,4]
 
 [ 1 2 3 ] each { print }
 >>> 1

@@ -1,4 +1,4 @@
--- BPROG INTERPRETER OFFICAL TESTS
+-- OFFICAL TESTS FOR BPROG INTERPRETER
 
 -- Internal libs
 import Bprog.Parser

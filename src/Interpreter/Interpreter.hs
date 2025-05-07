@@ -102,6 +102,7 @@ evalProgram (Tag "times" : _ : _ ) ( _ : _,_) =
     pure $ Left (RunTime ExpectedInteger)
 
 
+
 -- ===================== Evaluation loop =======================================
 
 -- Main evaluation loop
