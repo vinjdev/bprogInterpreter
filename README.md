@@ -133,6 +133,22 @@ List examples
 All these function will work on strings and code block
 EXCEPTION: `each`,`map`,`foldl`
 
-## 
+## Functions
+```bash
+value 20 := 
+value
+>>> 20
+
+counter 3 := counter times { " hello " print }
+>>> "hello"
+    "hello"
+    "hello" # will print 4 times, as repl will always print the top value
+```
+
+## Test
+```bash
+stack test
+```
+will show 104 examples of valid user input
 
 
