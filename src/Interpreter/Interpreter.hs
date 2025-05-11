@@ -14,6 +14,7 @@ import Interpreter.Arithmetics
 import Interpreter.ListOp
 import Interpreter.BprogIO
 import Interpreter.ParseOp
+import Interpreter.Dictionary
 
 -- External libs
 import qualified Data.Map as Map
@@ -114,7 +115,7 @@ evalProgram (x:xs) state = do
 
 -- Handle evaluation for one case
 eval :: Types -> EvalState -> IO (Either BprogError EvalState)
-eval val state@(stk,dict) = case val of
+eval val state@(_,dict) = case val of
 
     -- Pushing data types onto the stack
     Numbo n -> push (Numbo n) state
@@ -137,32 +138,20 @@ eval val state@(stk,dict) = case val of
         | elem op parseOps -> evalParse op state
 
     -- Stack operations
+    Tag "pop" -> pop state 
     Tag "dup" -> dup state
     Tag "swap" -> swap state 
-    Tag "pop" -> pop state 
 
     -- IO Operations
     Tag "print" -> printOp state 
     Tag "read" -> readOp state
+
+    -- Executes a block
+    Tag "exec" -> execBlock state
     
     -- Function and variable assignment
-    Tag ":=" -> 
-        case stk of
-            Tag _ : Tag _ : _ -> pure $ Left (RunTime ExpectedVariable) -- cannot assign a empty Tag
-            value : Tag name : rest -> pure $ Right (rest, Map.insert name value dict)
-            _ -> pure $ Left (RunTime ExpectedVariable)
-
-    Tag "fun" -> 
-        case stk of
-            Tag _ : Tag _ : _ -> pure $ Left (RunTime ExpectedVariable)
-            value : Tag name : rest -> pure $ Right (rest, Map.insert name value dict)
-            _                     -> pure $ Left (RunTime ExpectedVariable)
-
-    -- Executes a code block, which is at the top of the stack
-    Tag "exec" ->
-        case stk of
-            Block code : rest -> evalProgram code (rest,dict)
-            _ -> pure $ Left (RunTime ExpectedQuotation)
+    Tag ":=" -> pure $ insertDict state
+    Tag "fun" -> pure $ insertDict state
 
     -- Function call, or push 
     Tag sym -> 
@@ -181,7 +170,16 @@ evalBag dict val = case val of
                                         Just value -> pure value
                                         Nothing -> pure (Tag name) -- Nothing found in dictationy
                         other -> pure other
-                        
+
+-- Executes a code block, which is at the top of the stack
+execBlock :: EvalState -> IO(Either BprogError EvalState)
+execBlock (stk,dict) = 
+    case stk of
+        Block code : rest -> evalProgram code (rest,dict)
+        _ -> pure $ Left (RunTime ExpectedQuotation)
+                            
+
+
 -- Each 
 -- @param: Code 
 -- @param  List

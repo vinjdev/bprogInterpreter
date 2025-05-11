@@ -7,6 +7,7 @@ module Interpreter.BprogIO (
 -- Internal libs
 import Bprog.Types
 import Bprog.Errors
+import Interpreter.StackOp
 
 -- External libs
 import Data.List (intersperse)
@@ -35,6 +36,9 @@ prettyValue val = case val of
 listPritty :: [Types] -> String
 listPritty = concat . intersperse "," . map prettyValue
 
+
+-- ================ INTERPRETER OPERATIONS ==================
+
 -- Print operation
 --
 -- Takes the top value of the stack
@@ -50,5 +54,5 @@ readOp (stk,dict) = do
     putStr "Input: "
     hFlush stdout
     input <- getLine
-    pure $ Right (Wordsy input : stk,dict)
+    push (Wordsy input) (stk,dict)
 

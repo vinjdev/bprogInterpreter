@@ -61,7 +61,7 @@ evalArithmetics op (stk,dict) = case (op,stk) of
     ("/", Deci 0.0 : Deci _ : _) -> pure $ Left (RunTime DivisionByZero)  
     ("/", Deci f2 : Deci f1 : rest) -> push (Deci (f1 / f2)) (rest,dict) 
 
-    
+    -- Boolean Expressions
     ("<", Numbo n2 : Numbo n1 : rest) -> push (Truthy (n1 < n2)) (rest,dict)
     ("<", Deci f2 : Numbo n1 : rest) -> push (Truthy (fromIntegral n1 < f2)) (rest,dict)
     ("<", Numbo n2 : Deci f1 : rest) -> push (Truthy (f1 < fromIntegral n2)) (rest,dict)

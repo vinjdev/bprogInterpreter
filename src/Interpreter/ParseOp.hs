@@ -6,6 +6,7 @@ module Interpreter.ParseOp (
 -- Internal libs
 import Bprog.Types
 import Bprog.Errors
+import Interpreter.StackOp
 
 -- External libs
 import Text.Read (readMaybe)
@@ -20,7 +21,7 @@ parseOps = ["parseInteger","parseFloat","words"]
 evalParse :: String -> EvalState -> IO(Either BprogError EvalState)
 evalParse "parseInteger" (Wordsy str : rest,dict) = 
     case readMaybe str :: Maybe Integer of
-        Just n  -> pure $ Right (Numbo n : rest, dict)
+        Just n  -> push (Numbo n) (rest, dict)
         Nothing -> pure $ Left (RunTime ExpectedInteger)
 
 -- parseFloat
@@ -28,7 +29,7 @@ evalParse "parseInteger" (Wordsy str : rest,dict) =
 -- Reads a float from a string
 evalParse "parseFloat" (Wordsy str : rest,dict) = 
     case readMaybe str :: Maybe Float of
-        Just f  -> pure $ Right (Deci f : rest, dict)
+        Just f  -> push (Deci f) (rest, dict)
         Nothing -> pure $ Left (RunTime ExpectedInteger)
 
 -- words
@@ -37,6 +38,6 @@ evalParse "parseFloat" (Wordsy str : rest,dict) =
 evalParse "words" (Wordsy str : rest, dict) = 
     let parts = words str
         result = Bag (map Wordsy parts)
-    in pure $ Right (result : rest,dict)
+    in push (result) (rest,dict)
 
 evalParse _ _ = pure $ Left (RunTime ExpectedString)

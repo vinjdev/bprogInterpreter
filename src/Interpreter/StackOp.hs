@@ -9,7 +9,7 @@ module Interpreter.StackOp (
 import Bprog.Types
 import Bprog.Errors
 
--- Abstraction for pushing value onto stack
+-- Abstraction for pushing a value onto stack
 push :: Types -> EvalState -> IO (Either BprogError EvalState)
 push val (stk,dict) = pure $ Right (val : stk,dict)
 
