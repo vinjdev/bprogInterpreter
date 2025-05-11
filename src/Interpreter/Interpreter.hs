@@ -44,7 +44,10 @@ evalProgram (Tag "each" : code : rest ) (Bag list : stk,dict) = do
         Left err -> pure $ Left err
         Right newState -> evalProgram rest newState
 
--- map
+evalProgram (Tag "each" : _ : _ ) ( _ : _,_) = 
+    pure $ Left (RunTime ExpectedList)
+
+-- Map
 evalProgram (Tag "map" : code : rest ) (Bag list : stk, dict) = do
     result <- case code of
                 Block codeB -> evalMapBlock codeB list (stk,dict)
@@ -53,6 +56,10 @@ evalProgram (Tag "map" : code : rest ) (Bag list : stk, dict) = do
     case result of
         Left err -> pure $ Left err
         Right newState -> evalProgram rest newState
+
+-- map error
+evalProgram (Tag "map" : _ : _ ) ( _ : _,_) = 
+    pure $ Left (RunTime ExpectedList)
         
 
 -- foldl generic case
@@ -64,6 +71,10 @@ evalProgram (Tag "foldl" : val : rest ) (n@(Numbo _) : Bag list : stk,dict) = do
     case result of
         Left err -> pure $ Left err
         Right newState -> evalProgram rest newState
+
+-- Foldl error
+evalProgram (Tag "foldl" : _ : _ ) (_ : _ : _,_) =
+    pure $ Left (RunTime ExpectedList)
 
 -- Special case for if
 evalProgram (Tag "if" : trueBlock : falseBlock : rest ) (Truthy b : stk,dict) = do

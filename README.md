@@ -151,4 +151,25 @@ stack test
 ```
 will show 104 examples of valid user input
 
+## Program structure
+```bash
+src
+├── Bprog             # types, errors, repl mode and normal mode
+│   ├── Errors.hs
+│   ├── NormalMode.hs
+│   ├── Parser.hs
+│   ├── ReplMode.hs
+│   └── Types.hs
+├── Interpreter        # interpreter logic
+│   ├── Arithmetics.hs
+│   ├── BprogIO.hs
+│   ├── Dictionary.hs
+│   ├── Interpreter.hs
+│   ├── ListOp.hs
+│   ├── ParseOp.hs
+│   └── StackOp.hs
+└── prelude
+    └── prelude.bprog
+```
+
 

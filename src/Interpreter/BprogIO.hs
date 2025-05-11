@@ -44,9 +44,9 @@ listPritty = concat . intersperse "," . map prettyValue
 -- Takes the top value of the stack
 printOp :: EvalState -> IO (Either BprogError EvalState)
 printOp ([],_) = pure $ Left (RunTime StackEmpty)
-printOp (stk@(x:_),dict) = do
+printOp state@((x:_),_) = do
     putStrLn $ prettyValue x
-    pure $ Right (stk,dict)
+    pure $ Right state 
 
 -- reads a input
 readOp :: EvalState -> IO (Either BprogError EvalState)
