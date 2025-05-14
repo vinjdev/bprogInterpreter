@@ -27,10 +27,11 @@ import Control.Monad (foldM)
 
 evalProgram :: [Types] -> EvalState -> IO (Either BprogError EvalState)
 
--- Returns state when there is no parsed input
+-- Runs one last time through stack to find tags
 evalProgram [] (stk,dict) = do
     result <- mapM (`handleTags` dict) stk
     pure $ Right (result,dict)
+
 
 --  ================ Special lookahead functions =========================== 
 -- List operations: each, map, foldl
@@ -102,20 +103,16 @@ evalProgram (Tag "if" : code1 : code2 : rest ) (top : stk,dict) = do
     trueBlock <- handleTags code1 dict
     falseBlock <- handleTags code2 dict
     
-    result <- case cond of
-        Truthy b -> case (trueBlock, falseBlock) of
-            (Block tb, Block fb) -> do
-
-                let chosen = if b then tb else fb
-                evalProgram chosen (stk,dict)
-
-            (_,_) -> pure $ Left (RunTime ExpectedQuotation)
-
+    case cond of
+        Truthy b -> do
+            let chosen = if b then trueBlock else falseBlock
+            nextState <- case chosen of
+                Block code -> evalProgram code (stk, dict)
+                other      -> eval other (stk, dict)
+            case nextState of
+                Left err       -> pure $ Left err
+                Right newState -> evalProgram rest newState
         _ -> pure $ Left (RunTime ExpectedBool)
-
-    case result of
-        Left err       -> pure $ Left err
-        Right newState -> evalProgram rest newState
     
 
 -- loop
@@ -126,9 +123,9 @@ evalProgram (Tag "loop" : val1 : val2 : rest ) (stk,dict) = do
     result <- case cond of
         Block cond' -> case code of
                 Block c -> evalLoopBlock cond' c (stk,dict)
-                _       -> pure $ Left (RunTime ExpectedQuotation)
+                _ -> pure $ Left (RunTime ExpectedQuotation)
 
-        _           -> pure $ Left (RunTime ExpectedQuotation)
+        _ -> pure $ Left (RunTime ExpectedQuotation)
 
 
     case result of
@@ -141,19 +138,16 @@ evalProgram (Tag "times" : val : rest ) (top : stk,dict) = do
     number <- handleTags top dict
     code <- handleTags val dict
     
-    case number of
+    result <- case number of
         Numbo n -> case code of
-            Block c -> do
-
-                result <- evalTimesBlock c n (stk,dict)
-                        
-                case result of
-                    Left err -> pure $ Left err
-                    Right newState -> evalProgram rest newState 
-
-            _ -> pure $ Left (RunTime ExpectedQuotation)
+            Block c -> evalTimesBlock c n (stk,dict)
+            Bag _   -> pure $ Left (RunTime ExpectedList)
+            _       -> evalTimesBlock [code] n (stk,dict) 
 
         _ -> pure $ Left (RunTime ExpectedInteger)
+    case result of
+        Left err -> pure $ Left err
+        Right newState -> evalProgram rest newState
 
 
 
@@ -204,15 +198,19 @@ eval val state@(stk,dict) = case val of
     -- Pushing a symbol onto the stack
     Tag ":=" -> 
         case stk of
-            code : Tag name : rest -> pure $ Right (rest,Map.insert name code dict)
-            Tag _ : _              -> pure $ Left (RunTime ExpectedQuotation)
-            _                      -> pure $ Left (RunTime ExpectedQuotation)
+            code : Tag name : rest -> do
+                c <- handleTags code dict
+                pure $ Right (rest,Map.insert name c dict)
+                    
+            _ -> pure $ Left (RunTime ExpectedQuotation)
 
     Tag "fun" -> 
         case stk of
-            code : Tag name : rest -> pure $ Right (rest,Map.insert name code dict)
-            Tag _ : _              -> pure $ Left (RunTime ExpectedQuotation)
-            _                      -> pure $ Left (RunTime ExpectedQuotation)
+            code : Tag name : rest -> do
+                c <- handleTags code dict
+                pure $ Right (rest,Map.insert name c dict)
+                    
+            _ -> pure $ Left (RunTime ExpectedQuotation)
 
     Tag sym -> push (Tag sym) state 
     
@@ -229,12 +227,14 @@ evalBag dict val = case val of
 
 -- Executes a code block, which is at the top of the stack
 execBlock :: EvalState -> IO(Either BprogError EvalState)
-execBlock (stk,dict) = 
-    case stk of
-        Block code : rest -> evalProgram code (rest,dict)
-        _ -> pure $ Left (RunTime ExpectedQuotation)
-                            
+execBlock ([], _) = pure $ Left (RunTime StackEmpty)
 
+execBlock (top:rest,dict) = do
+    code <- handleTags top dict
+    case code of
+        Block c -> evalProgram c (rest,dict)
+        _          -> pure $ Left (RunTime ExpectedQuotation)
+    
 
 -- Each 
 -- @param: Code 

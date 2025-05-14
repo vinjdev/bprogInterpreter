@@ -11,6 +11,6 @@ import qualified Data.Map as Map
 handleTags :: Types -> Dictionary -> IO (Types)
 handleTags (Tag sym) dict =
     case Map.lookup sym dict of
-        Just val -> pure val
+        Just val -> handleTags val dict
         Nothing -> pure (Tag sym)
 handleTags val _  = pure val

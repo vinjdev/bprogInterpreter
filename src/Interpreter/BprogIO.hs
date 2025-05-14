@@ -8,6 +8,7 @@ module Interpreter.BprogIO (
 import Bprog.Types
 import Bprog.Errors
 import Interpreter.StackOp
+import Interpreter.Dictionary
 
 -- External libs
 import Data.List (intersperse)
@@ -44,8 +45,9 @@ listPritty = concat . intersperse "," . map prettyValue
 -- Takes the top value of the stack
 printOp :: EvalState -> IO (Either BprogError EvalState)
 printOp ([],_) = pure $ Left (RunTime StackEmpty)
-printOp state@((x:_),_) = do
-    putStrLn $ prettyValue x
+printOp state@((x:_),dict) = do
+    x' <- handleTags x dict
+    putStrLn $ prettyValue x'
     pure $ Right state 
 
 -- reads a input
