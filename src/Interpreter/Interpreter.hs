@@ -28,94 +28,137 @@ import Control.Monad (foldM)
 evalProgram :: [Types] -> EvalState -> IO (Either BprogError EvalState)
 
 -- Returns state when there is no parsed input
-evalProgram [] state = pure $ Right state
+evalProgram [] (stk,dict) = do
+    result <- mapM (`handleTags` dict) stk
+    pure $ Right (result,dict)
 
 --  ================ Special lookahead functions =========================== 
 -- List operations: each, map, foldl
 -- Control flow: if, loop, times
 
 -- each generic case
-evalProgram (Tag "each" : code : rest ) (Bag list : stk,dict) = do
-    result <- case code of
-                Block codeB -> evalEachBlock codeB list (stk,dict)
-                Bag _ -> pure $ Left (RunTime ExpectedQuotation)
-                _ -> evalEachBlock [code] list (stk,dict)
-    case result of
-        Left err -> pure $ Left err
-        Right newState -> evalProgram rest newState
+evalProgram (Tag "each" : val : rest ) (top : stk,dict) = do
+    code <- handleTags val dict
+    list <- handleTags top dict
 
-evalProgram (Tag "each" : _ : _ ) ( _ : _,_) = 
-    pure $ Left (RunTime ExpectedList)
+    result <- case list of
+            Bag xs -> case code of
+                    Block c -> evalEachBlock c xs (stk,dict)
+                    Bag _   -> pure $ Left (RunTime ExpectedQuotation) 
+                    _       -> evalEachBlock [code] xs (stk,dict) 
+            
+            _ -> pure $ Left (RunTime ExpectedList)
+
+    case result of
+        Left err       -> pure $ Left err
+        Right newState -> evalProgram rest newState
+        
+
 
 -- Map
-evalProgram (Tag "map" : code : rest ) (Bag list : stk, dict) = do
-    result <- case code of
-                Block codeB -> evalMapBlock codeB list (stk,dict)
-                Bag _ -> pure $ Left (RunTime ExpectedQuotation)
-                _ -> evalMapBlock [code] list (stk,dict)
-    case result of
-        Left err -> pure $ Left err
-        Right newState -> evalProgram rest newState
+evalProgram (Tag "map" : val : rest ) (top : stk, dict) = do
+    code <- handleTags val dict
+    list <- handleTags top dict
 
--- map error
-evalProgram (Tag "map" : _ : _ ) ( _ : _,_) = 
-    pure $ Left (RunTime ExpectedList)
+    result <- case list of
+        Bag xs -> case code of
+                Block codeB -> evalMapBlock codeB xs (stk,dict)
+                Bag _       -> pure $ Left (RunTime ExpectedQuotation)
+                _           -> evalMapBlock [code] xs (stk,dict)
+            
+        _ -> pure $ Left (RunTime ExpectedList)
+
+    case result of
+        Left err       -> pure $ Left err
+        Right newState -> evalProgram rest newState
         
 
 -- foldl generic case
-evalProgram (Tag "foldl" : val : rest ) (n@(Numbo _) : Bag list : stk,dict) = do
-    result <- case val of
-            Block code -> evalFoldlBlock code n list (stk,dict)
-            Bag _ -> pure $ Left (RunTime ExpectedQuotation)
-            _ -> evalFoldlBlock [val] n list (stk,dict)
+evalProgram (Tag "foldl" : val : rest ) (number : list : stk,dict) = do
+    code <- handleTags val dict
+    n <- handleTags number dict
+    l <- handleTags list dict
+
+    result <- case l of
+            Bag xs -> case n of
+
+                n'@(Numbo _) -> case code of
+                        Block c -> evalFoldlBlock c n' xs (stk,dict)
+                        Bag _   -> pure $ Left (RunTime ExpectedQuotation)
+                        _       -> evalFoldlBlock [code] n' xs (stk,dict)
+                
+                _ -> pure $ Left (RunTime ExpectedInteger)
+
+            _ -> pure $ Left (RunTime ExpectedList)
+
     case result of
-        Left err -> pure $ Left err
+        Left err       -> pure $ Left err
         Right newState -> evalProgram rest newState
 
--- Foldl error
-evalProgram (Tag "foldl" : _ : _ ) (_ : _ : _,_) =
-    pure $ Left (RunTime ExpectedList)
 
 -- Special case for if
-evalProgram (Tag "if" : trueBlock : falseBlock : rest ) (Truthy b : stk,dict) = do
-    let checkCode = if b then trueBlock else falseBlock 
-    result <- case checkCode of
-                Block code -> evalProgram code (stk,dict)
-                _ -> eval checkCode (stk,dict)
-    case result of
-        Left err -> pure $ Left err
-        Right newState -> evalProgram rest newState
+evalProgram (Tag "if" : code1 : code2 : rest ) (top : stk,dict) = do
+    cond <- handleTags top dict
+    trueBlock <- handleTags code1 dict
+    falseBlock <- handleTags code2 dict
+    
+    result <- case cond of
+        Truthy b -> case (trueBlock, falseBlock) of
+            (Block tb, Block fb) -> do
 
--- if: error case: There is no boolean expression
-evalProgram (Tag "if" : _ : _ : _ ) (_:_,_) =
-    pure $ Left (RunTime ExpectedBool)
+                let chosen = if b then tb else fb
+                evalProgram chosen (stk,dict)
+
+            (_,_) -> pure $ Left (RunTime ExpectedQuotation)
+
+        _ -> pure $ Left (RunTime ExpectedBool)
+
+    case result of
+        Left err       -> pure $ Left err
+        Right newState -> evalProgram rest newState
+    
 
 -- loop
-evalProgram (Tag "loop" : Block cond : Block code : rest ) (stk,dict) = do
-    result <- evalLoopBlock cond code (stk,dict)
+evalProgram (Tag "loop" : val1 : val2 : rest ) (stk,dict) = do
+    cond <- handleTags val1 dict
+    code <- handleTags val2 dict
+    
+    result <- case cond of
+        Block cond' -> case code of
+                Block c -> evalLoopBlock cond' c (stk,dict)
+                _       -> pure $ Left (RunTime ExpectedQuotation)
+
+        _           -> pure $ Left (RunTime ExpectedQuotation)
+
+
     case result of
         Left err -> pure $ Left err
         Right newState -> evalProgram rest newState
 
-evalProgram (Tag "loop" : _ : _ : _ ) (_,_) =
-    pure $ Left (RunTime ExpectedQuotation)
 
 -- times generic case
-evalProgram (Tag "times" : code : rest ) (Numbo n : stk,dict) = do
-    result <- case code of
-                Block codeB -> evalTimesBlock codeB n (stk,dict)
-                Bag _ -> pure $ Left (RunTime ExpectedQuotation)
-                _ -> evalTimesBlock [code] n (stk,dict)
-    case result of
-        Left err -> pure $ Left err
-        Right newState -> evalProgram rest newState 
+evalProgram (Tag "times" : val : rest ) (top : stk,dict) = do
+    number <- handleTags top dict
+    code <- handleTags val dict
+    
+    case number of
+        Numbo n -> case code of
+            Block c -> do
 
-evalProgram (Tag "times" : _ : _ ) ( _ : _,_) =
-    pure $ Left (RunTime ExpectedInteger)
+                result <- evalTimesBlock c n (stk,dict)
+                        
+                case result of
+                    Left err -> pure $ Left err
+                    Right newState -> evalProgram rest newState 
+
+            _ -> pure $ Left (RunTime ExpectedQuotation)
+
+        _ -> pure $ Left (RunTime ExpectedInteger)
 
 
 
--- ===================== Evaluation loop =======================================
+                        
+-- ===================== Main evaluation loop ============================
 
 -- Main evaluation loop
 evalProgram (x:xs) state = do
@@ -126,52 +169,54 @@ evalProgram (x:xs) state = do
 
 -- Handle evaluation for one case
 eval :: Types -> EvalState -> IO (Either BprogError EvalState)
-eval val state@(_,dict) = case val of
+eval val state@(stk,dict) = case val of
 
     -- Pushing data types onto the stack
-    Numbo n -> push (Numbo n) state
-    Deci f -> push (Deci f) state
+    Numbo n  -> push (Numbo n) state
+    Deci f   -> push (Deci f) state
     Truthy b -> push (Truthy b) state 
     Wordsy s -> push (Wordsy s) state 
 
     -- Pushing a list onto the Stack
-    Bag xs -> do 
-        newList <- mapM (evalBag dict) xs
-        push (Bag newList) state
-
+    Bag xs -> mapM (evalBag dict) xs >>= \new -> push (Bag new) state
+    
     -- Code Block
     Block code -> push (Block code) state
     
     -- arithmetics, list and parser operations
     Tag op
         | elem op arithmeticsOps -> evalArithmetics op state
-        | elem op listOps -> evalListOp op state
-        | elem op parseOps -> evalParse op state
+        | elem op listOps        -> evalListOp op state
+        | elem op parseOps       -> evalParse op state
 
     -- Stack operations
-    Tag "pop" -> pop state 
-    Tag "dup" -> dup state
+    Tag "pop"  -> pop state 
+    Tag "dup"  -> dup state
     Tag "swap" -> swap state 
 
     -- IO Operations
     Tag "print" -> printOp state 
-    Tag "read" -> readOp state
+    Tag "read"  -> readOp state
 
     -- Executes a block
     Tag "exec" -> execBlock state
     
-    -- Function and variable assignment
-    Tag ":=" -> pure $ insertDict state
-    Tag "fun" -> pure $ insertDict state
+    -- Pushing a symbol onto the stack
+    Tag ":=" -> 
+        case stk of
+            code : Tag name : rest -> pure $ Right (rest,Map.insert name code dict)
+            Tag _ : _              -> pure $ Left (RunTime ExpectedQuotation)
+            _                      -> pure $ Left (RunTime ExpectedQuotation)
 
-    -- Function call, or push 
-    Tag sym -> 
-        case Map.lookup sym dict of
-            Just (Block body) -> evalProgram body state
-            Just value -> push value state   
-            Nothing  -> push (Tag sym) state
-                       
--- ============================= HELPER FUNCTIONS ================================    
+    Tag "fun" -> 
+        case stk of
+            code : Tag name : rest -> pure $ Right (rest,Map.insert name code dict)
+            Tag _ : _              -> pure $ Left (RunTime ExpectedQuotation)
+            _                      -> pure $ Left (RunTime ExpectedQuotation)
+
+    Tag sym -> push (Tag sym) state 
+    
+-- ============================= HELPER FUNCTIONS ================================
 
 -- EvalBag
 -- Checks if there are functions or variables inside a list
@@ -179,7 +224,7 @@ evalBag :: Dictionary -> Types -> IO (Types)
 evalBag dict val = case val of
                         Tag name -> case Map.lookup name dict of
                                         Just value -> pure value
-                                        Nothing -> pure (Tag name) -- Nothing found in dictationy
+                                        Nothing    -> pure (Tag name) -- Nothing found in dictationy
                         other -> pure other
 
 -- Executes a code block, which is at the top of the stack
@@ -201,7 +246,7 @@ evalEachBlock :: [Types] -> [Types] -> EvalState -> IO (Either BprogError EvalSt
 evalEachBlock code list (rest,dict) = do
         let runEach acc el =
                 case acc of
-                    Left err -> pure $ Left err
+                    Left err    -> pure $ Left err
                     Right (s,d) -> evalProgram code (el : s,d)
         foldM runEach (Right (rest,dict)) list 
 
@@ -226,7 +271,7 @@ evalMapBlock code list (rest,dict) = do
                     extractTop _ = Nothing
 
 -- Foldl
--- @param code
+-- @param code (operation)
 -- @param Numbo (integer)
 -- @param list
 --
@@ -275,9 +320,9 @@ evalLoopBlock breakCond code (rest,dict) = do
 -- Loops through a code n amount of times
 evalTimesBlock :: [Types] -> Integer -> EvalState -> IO (Either BprogError EvalState) 
 evalTimesBlock code count (rest,dict) = do
-                let runNTimes 0 state' = pure $ Right state'
-                    runNTimes i state' = do
-                        result <- evalProgram code state'
+                let runNTimes 0 state = pure $ Right state
+                    runNTimes i state = do
+                        result <- evalProgram code state
                         case result of
                             Left err -> pure $ Left err
                             Right newState -> runNTimes (i-1) newState

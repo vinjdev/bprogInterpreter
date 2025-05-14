@@ -16,7 +16,7 @@ data Types
     | Bag [Types]     -- List
     | Block [Types]   -- code block
     | Tag String      -- symbol
-    deriving(Eq, Show)
+    deriving (Eq, Show)
 
 -- Data structure for the interpreter
 type Stack = [Types]

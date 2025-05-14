@@ -1,20 +1,16 @@
 module Interpreter.Dictionary (
-    insertDict
+    handleTags
 ) where
 
 -- Internal libs
 import Bprog.Types
-import Bprog.Errors
 
 -- External libs
 import qualified Data.Map as Map
 
--- InsertDict
---
--- Inserts a variable or a function in the dictionary
-insertDict :: EvalState -> Either BprogError EvalState
-insertDict (stk,dict) = case stk of
-                            Tag _ : Tag _ : _ -> Left (RunTime ExpectedVariable)
-                            value : Tag name : rest -> Right (rest,Map.insert name value dict)
-                            _ -> Left (RunTime ExpectedVariable)
-
+handleTags :: Types -> Dictionary -> IO (Types)
+handleTags (Tag sym) dict =
+    case Map.lookup sym dict of
+        Just val -> pure val
+        Nothing -> pure (Tag sym)
+handleTags val _  = pure val

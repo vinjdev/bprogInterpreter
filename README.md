@@ -168,7 +168,7 @@ src
 │   ├── ListOp.hs
 │   ├── ParseOp.hs
 │   └── StackOp.hs
-└── prelude
+└── prelude            # prelude library for BPROG 
     └── prelude.bprog
 ```
 
