@@ -28,9 +28,7 @@ import Control.Monad (foldM)
 evalProgram :: [Types] -> EvalState -> IO (Either BprogError EvalState)
 
 -- Runs one last time through stack to find tags
-evalProgram [] (stk,dict) = do
-    result <- mapM (`handleTags` dict) stk
-    pure $ Right (result,dict)
+evalProgram [] (stk,dict) = pure $ Right (stk,dict)
 
 
 --  ================ Special lookahead functions =========================== 
@@ -175,42 +173,38 @@ eval val state@(stk,dict) = case val of
     -- Code Block
     Block code -> push (Block code) state
     
-    -- arithmetics, list and parser operations
+    -- Symbol operations
     Tag op
         | elem op arithmeticsOps -> evalArithmetics op state
         | elem op listOps        -> evalListOp op state
         | elem op parseOps       -> evalParse op state
-
-    -- Stack operations
-    Tag "pop"  -> pop state 
-    Tag "dup"  -> dup state
-    Tag "swap" -> swap state 
-
-    -- IO Operations
-    Tag "print" -> printOp state 
-    Tag "read"  -> readOp state
-
-    -- Executes a block
-    Tag "exec" -> execBlock state
-    
-    -- Pushing a symbol onto the stack
-    Tag ":=" -> 
-        case stk of
-            code : Tag name : rest -> do
-                c <- handleTags code dict
-                pure $ Right (rest,Map.insert name c dict)
+        | op == "pop"            -> pop state
+        | op == "dup"            -> dup state
+        | op == "swap"           -> swap state
+        | op == "print"          -> printOp state
+        | op == "read"           -> readOp state
+        | op == "exec"           -> execBlock state
+        | op == ":=" -> 
+                    case stk of
+                        code : Tag name : rest -> do
+                            c <- handleTags code dict
+                            pure $ Right (rest,Map.insert name c dict)
                     
-            _ -> pure $ Left (RunTime ExpectedQuotation)
-
-    Tag "fun" -> 
-        case stk of
-            code : Tag name : rest -> do
-                c <- handleTags code dict
-                pure $ Right (rest,Map.insert name c dict)
+                        _ -> pure $ Left (RunTime ExpectedQuotation)
+        | op == "fun" -> 
+                    case stk of
+                        code : Tag name : rest -> do
+                            c <- handleTags code dict
+                            pure $ Right (rest,Map.insert name c dict)
                     
-            _ -> pure $ Left (RunTime ExpectedQuotation)
+                        _ -> pure $ Left (RunTime ExpectedQuotation)
+        | otherwise -> 
+            case Map.lookup op dict of
+                Just value -> case value of
+                    Block code -> evalProgram code state
+                    other      -> push other state
+                Nothing -> push (Tag op) state
 
-    Tag sym -> push (Tag sym) state 
     
 -- ============================= HELPER FUNCTIONS ================================
 

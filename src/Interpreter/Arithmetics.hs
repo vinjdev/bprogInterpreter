@@ -7,7 +7,7 @@ module Interpreter.Arithmetics(
 import Bprog.Types
 import Bprog.Errors
 import Interpreter.StackOp
-import Interpreter.Dictionary
+import Interpreter.Dictionary 
 
 -- List of allowed arithmetic operations
 arithmeticsOps :: [String]
