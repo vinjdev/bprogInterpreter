@@ -23,6 +23,11 @@ A simple interpreted stack based programming language written in haskell
 This is just an abstraction for the data types
 Which is only viewable for debuggingg with `:s` and `:m`
 
+## Tech Stack
+- Language: `Haskell`
+- Dependencies: `Base` and `Containers` - Map
+- Testing: `hspec`
+
 ## Build and run
 build:
 ```bash
