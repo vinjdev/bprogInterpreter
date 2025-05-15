@@ -27,6 +27,7 @@ import Control.Monad (foldM)
 
 evalProgram :: [Types] -> EvalState -> IO (Either BprogError EvalState)
 
+
 -- Returns state when there is no parsed input
 evalProgram [] state = pure $ Right state
 
