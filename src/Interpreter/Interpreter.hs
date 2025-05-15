@@ -27,9 +27,7 @@ import Control.Monad (foldM)
 
 evalProgram :: [Types] -> EvalState -> IO (Either BprogError EvalState)
 
--- Runs one last time through stack to find tags
-evalProgram [] (stk,dict) = pure $ Right (stk,dict)
-
+evalProgram [] state = pure $ Right state
 
 --  ================ Special lookahead functions =========================== 
 -- List operations: each, map, foldl
