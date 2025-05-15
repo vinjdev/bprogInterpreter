@@ -150,8 +150,6 @@ evalProgram (Tag "times" : val : rest ) (top : stk,dict) = do
         Right newState -> evalProgram rest newState
 
 
-
-                        
 -- ===================== Main evaluation loop ============================
 
 -- Main evaluation loop
@@ -216,6 +214,7 @@ eval val state@(stk,dict) = case val of
     
 -- ============================= HELPER FUNCTIONS ================================
 
+
 -- EvalBag
 -- Checks if there are functions or variables inside a list
 evalBag :: Dictionary -> Types -> IO (Types)
@@ -233,7 +232,7 @@ execBlock (top:rest,dict) = do
     code <- handleTags top dict
     case code of
         Block c -> evalProgram c (rest,dict)
-        _          -> pure $ Left (RunTime ExpectedQuotation)
+        _       -> pure $ Left (RunTime ExpectedQuotation)
     
 
 -- Each 
