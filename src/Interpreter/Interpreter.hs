@@ -122,6 +122,23 @@ evalProgram (Tag "times" : code : rest ) (number : stk,dict) = do
         Left err -> pure $ Left err
         Right newState -> evalProgram rest newState 
 
+evalProgram (Tag name : value : Tag ":=" : rest) (stk,dict) = do
+    result <- case value of
+        Block code -> pure $ Right ((Block code):(Tag name):stk,dict)
+        _          -> eval value (Tag name : stk,dict)
+    case result of
+        Left err -> pure $ Left err
+        Right newState -> evalProgram (Tag ":=" : rest) newState 
+
+
+evalProgram (Tag name : value : Tag "fun" : rest) (stk,dict) = do
+    result <- case value of
+        Block code -> pure $ Right ((Block code):(Tag name):stk,dict)
+        _          -> eval value (Tag name : stk,dict)
+    case result of
+        Left err -> pure $ Left err
+        Right newState -> evalProgram (Tag "fun" : rest) newState 
+
 
 -- ===================== Evaluation loop =======================================
 
@@ -163,10 +180,10 @@ eval val state@(_,dict) = case val of
         | op == "exec"           -> execBlock state
         | op == ":="             -> pure $ insertDict state
         | op == "fun"            -> pure $ insertDict state
-        | otherwise -> case Map.lookup op dict of
-                            Just (Block body) -> evalProgram body state
-                            Just value -> push value state   
-                            Nothing  -> push (Tag op) state
+        | otherwise              -> case Map.lookup op dict of
+                Just (Block code)    -> evalProgram code state
+                Just value           -> push value state
+                Nothing              -> push (Tag op) state
                        
 -- ============================= HELPER FUNCTIONS ================================    
 
