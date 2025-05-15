@@ -12,16 +12,17 @@ A simple interpreted stack based programming language written in haskell
 - List operations: `head`, `tail`, `empty`, `length`, `cons` `append`, `each`, `map`, `foldl`
 
 ## Supported data types
-- Numbo  -> Integer
-- Deci   -> Float
-- Truthy -> Bool
-- Wordsy -> String
-- Bag    -> List
-- Block  -> Code Block
-- Tag    -> Symbol
+| Type     | Description                  |
+| -------- | ---------------------------- |
+| `Numbo`  | Integer                      |
+| `Deci`   | Float                        |
+| `Truthy` | Boolean                      |
+| `Wordsy` | String                       |
+| `Bag`    | List                         |
+| `Block`  | Code block                   |
+| `Tag`    | Symbol (e.g. `hello_symbol`) |
 
-This is just an abstraction for the data types
-Which is only viewable for debuggingg with `:s` and `:m`
+These are internal types used by the interpreter and visible only through debugging commands (`:s`, `:m`).
 
 ## Tech Stack
 - Language: `Haskell`
@@ -150,7 +151,7 @@ List examples
 All these function will work on strings and code block
 EXCEPTION: `each`,`map`,`foldl`
 
-## Functions
+## Functions and Variables
 ```bash
 value 20 := 
 value
@@ -166,7 +167,7 @@ counter 3 := counter times { " hello " print }
 ```bash
 stack test
 ```
-will show 104 examples of valid user input
+Runs 104 examples of valid BPROG input to validate functionality.
 
 ## Program structure
 ```bash
@@ -188,5 +189,10 @@ src
 └── prelude
     └── prelude.bprog
 ```
+
+## License
+
+This project is licensed under the BSD 3-Clause License – see the [LICENSE](./LICENSE) file for details.
+
 
 
