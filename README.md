@@ -11,6 +11,18 @@ A simple interpreted stack based programming language written in haskell
 - Print and Read: `print`, `read`
 - List operations: `head`, `tail`, `empty`, `length`, `cons` `append`, `each`, `map`, `foldl`
 
+## Supported data types
+- Numbo  -> Integer
+- Deci   -> Float
+- Truthy -> Bool
+- Wordsy -> String
+- Bag    -> List
+- Block  -> Code Block
+- Tag    -> Symbol
+
+This is just an abstraction for the data types
+Which is only viewable for debuggingg with `:s` and `:m`
+
 ## Build and run
 build:
 ```bash
